@@ -28,6 +28,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { SeasonForm, SeasonFormData } from './SeasonForm'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { AreaMapTab } from '@/features/areas/AreaMapTab'
+import { SoilAnalysisTab } from '@/features/soil/SoilAnalysisTab'
 
 export default function AreaDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -193,6 +194,7 @@ export default function AreaDetailsPage() {
         <TabsList className="mb-6">
           <TabsTrigger value="details">Detalhes</TabsTrigger>
           <TabsTrigger value="map">Mapa Geográfico</TabsTrigger>
+          <TabsTrigger value="soil">Análises de Solo</TabsTrigger>
         </TabsList>
 
         <TabsContent value="details" className="mt-0">
@@ -294,6 +296,10 @@ export default function AreaDetailsPage() {
 
         <TabsContent value="map" className="mt-0">
           <AreaMapTab area={area} canEdit={canEdit} />
+        </TabsContent>
+
+        <TabsContent value="soil" className="mt-0">
+          <SoilAnalysisTab area={area} canEdit={canEdit} />
         </TabsContent>
       </Tabs>
     </div>
