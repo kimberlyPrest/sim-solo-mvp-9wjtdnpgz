@@ -961,6 +961,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      commit_soil_analysis_import: {
+        Args: {
+          p_campaign_id: string
+          p_data: Json
+          p_file_path: string
+          p_file_size: number
+          p_import_id: string
+          p_metadata: Json
+          p_org_id: string
+          p_original_name: string
+        }
+        Returns: undefined
+      }
       get_area_map_data: { Args: { p_area_id: string }; Returns: Json }
       get_campaign_points: { Args: { p_campaign_id: string }; Returns: Json }
       get_user_organizations: { Args: never; Returns: string[] }
@@ -1703,6 +1716,93 @@ export const Constants = {
 //     UPDATE public.imports
 //     SET status = 'committed', committed_at = NOW()
 //     WHERE id = p_import_id;
+//   END;
+//   $function$
+//
+// FUNCTION commit_soil_analysis_import(uuid, uuid, uuid, text, text, bigint, jsonb, jsonb)
+//   CREATE OR REPLACE FUNCTION public.commit_soil_analysis_import(p_import_id uuid, p_org_id uuid, p_campaign_id uuid, p_file_path text, p_original_name text, p_file_size bigint, p_data jsonb, p_metadata jsonb)
+//    RETURNS void
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//    SET search_path TO 'public'
+//   AS $function$
+//   DECLARE
+//       v_item jsonb;
+//       v_meas jsonb;
+//       v_sample_id uuid;
+//   BEGIN
+//       IF auth.uid() IS NULL OR NOT public.has_role_in_org(
+//           p_org_id,
+//           ARRAY['admin'::public.member_role, 'technician'::public.member_role]
+//       ) THEN
+//           RAISE EXCEPTION 'Acesso negado';
+//       END IF;
+//
+//       IF p_metadata IS NOT NULL THEN
+//           UPDATE public.sampling_campaigns
+//           SET laboratory = COALESCE(p_metadata->>'laboratory', laboratory),
+//               sample_date = CASE WHEN p_metadata->>'sample_date' IS NOT NULL THEN (p_metadata->>'sample_date')::date ELSE sample_date END,
+//               result_date = CASE WHEN p_metadata->>'result_date' IS NOT NULL THEN (p_metadata->>'result_date')::date ELSE result_date END,
+//               source = CASE WHEN p_metadata->>'source' IS NOT NULL THEN (p_metadata->>'source')::public.campaign_source ELSE source END,
+//               updated_at = NOW()
+//           WHERE id = p_campaign_id AND organization_id = p_org_id;
+//       END IF;
+//
+//       INSERT INTO public.imports (
+//           id, organization_id, kind, status, created_by, uploaded_by,
+//           committed_at
+//       ) VALUES (
+//           p_import_id, p_org_id, 'soil_analysis', 'committed', auth.uid(), auth.uid(),
+//           NOW()
+//       );
+//
+//       IF p_file_path IS NOT NULL THEN
+//           INSERT INTO public.import_files (
+//               import_id, organization_id, file_path, storage_path, original_name, file_size, file_kind
+//           ) VALUES (
+//               p_import_id, p_org_id, p_file_path, p_file_path, p_original_name, p_file_size, 'soil_analysis'
+//           );
+//       END IF;
+//
+//       FOR v_item IN SELECT * FROM jsonb_array_elements(p_data)
+//       LOOP
+//           SELECT id INTO v_sample_id
+//           FROM public.samples
+//           WHERE sampling_point_id = (v_item->>'point_id')::uuid
+//             AND depth_from_cm = (v_item->>'depth_from_cm')::numeric
+//             AND depth_to_cm = (v_item->>'depth_to_cm')::numeric;
+//
+//           IF v_sample_id IS NULL THEN
+//               v_sample_id := gen_random_uuid();
+//               INSERT INTO public.samples (
+//                   id, organization_id, sampling_point_id, code, depth_from_cm, depth_to_cm
+//               ) VALUES (
+//                   v_sample_id,
+//                   p_org_id,
+//                   (v_item->>'point_id')::uuid,
+//                   v_item->>'code',
+//                   (v_item->>'depth_from_cm')::numeric,
+//                   (v_item->>'depth_to_cm')::numeric
+//               );
+//           END IF;
+//
+//           FOR v_meas IN SELECT * FROM jsonb_array_elements(v_item->'measurements')
+//           LOOP
+//               INSERT INTO public.lab_measurements (
+//                   organization_id, sample_id, attribute_code, numeric_value, text_value
+//               ) VALUES (
+//                   p_org_id,
+//                   v_sample_id,
+//                   v_meas->>'attribute_code',
+//                   (v_meas->>'numeric_value')::numeric,
+//                   v_meas->>'text_value'
+//               )
+//               ON CONFLICT (sample_id, attribute_code) DO UPDATE
+//               SET numeric_value = EXCLUDED.numeric_value,
+//                   text_value = EXCLUDED.text_value,
+//                   updated_at = NOW();
+//           END LOOP;
+//       END LOOP;
 //   END;
 //   $function$
 //
