@@ -1677,7 +1677,9 @@ export const Constants = {
 //     IF p_action IN ('initial', 'update_boundary') THEN
 //       UPDATE public.areas
 //       SET boundary = gis.ST_Multi(
-//             gis.ST_SetSRID(gis.ST_GeomFromGeoJSON(p_boundary_geojson::text), 4326)
+//             gis.ST_Force2D(
+//               gis.ST_SetSRID(gis.ST_GeomFromGeoJSON(p_boundary_geojson::text), 4326)
+//             )
 //           ),
 //           calculated_area_ha = p_calculated_area_ha,
 //           source_srid = p_source_srid,

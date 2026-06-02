@@ -78,7 +78,8 @@ export function ImportSoilWizard({
   })
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
-    if (!file) return toast({ title: 'Atenção', description: 'Selecione um arquivo .xlsx' })
+    if (!file)
+      return toast({ title: 'Atenção', description: 'Selecione um arquivo .xlsx ou .xlsm' })
     setIsUploading(true)
     try {
       const ext = file.name.split('.').pop()
@@ -261,10 +262,10 @@ export function ImportSoilWizard({
                 )}
               />
               <FormItem>
-                <FormLabel>Arquivo Excel (.xlsx)</FormLabel>
+                <FormLabel>Arquivo Excel (.xlsx, .xlsm)</FormLabel>
                 <Input
                   type="file"
-                  accept=".xlsx"
+                  accept=".xlsx, .xlsm"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
               </FormItem>

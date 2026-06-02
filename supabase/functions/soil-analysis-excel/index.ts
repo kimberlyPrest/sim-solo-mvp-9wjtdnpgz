@@ -122,7 +122,18 @@ Deno.serve(async (req: Request) => {
         throw new Error(`Falha ao baixar arquivo: ${downloadError?.message}`)
 
       const arrayBuffer = await fileData.arrayBuffer()
-      const wb = XLSX.read(arrayBuffer, { type: 'buffer' })
+      const wb = XLSX.read(arrayBuffer, {
+        type: 'buffer',
+        cellFormula: false,
+        cellHTML: false,
+        cellStyles: false,
+        cellText: false,
+        bookVBA: false,
+        bookDeps: false,
+        bookProps: false,
+        bookFiles: false,
+        dense: true,
+      })
 
       const ws0_20 = wb.Sheets['SOLO_0_20']
       const ws20_40 = wb.Sheets['SOLO_20_40']
