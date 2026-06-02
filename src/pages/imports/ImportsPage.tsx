@@ -14,45 +14,50 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { NewImportAction } from './NewImportAction'
 
 export default function ImportsPage() {
   const { organization } = useAuth()
   const [imports, setImports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function loadImports() {
-      if (!organization) return
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('imports')
-          .select(`
-            id, kind, status, created_at,
-            import_files(original_name),
-            profiles!imports_created_by_fkey(full_name, email)
-          `)
-          .eq('organization_id', organization.id)
-          .order('created_at', { ascending: false })
+  async function loadImports() {
+    if (!organization) return
+    setLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('imports')
+        .select(`
+          id, kind, status, created_at,
+          import_files(original_name),
+          profiles!imports_created_by_fkey(full_name, email)
+        `)
+        .eq('organization_id', organization.id)
+        .order('created_at', { ascending: false })
 
-        if (error) throw error
-        if (data) setImports(data)
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
+      if (error) throw error
+      if (data) setImports(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadImports()
   }, [organization])
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Importações</h1>
-        <p className="text-muted-foreground">
-          Histórico e central de processamento de arquivos externos.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Importações</h1>
+          <p className="text-muted-foreground">
+            Histórico e central de processamento de arquivos externos.
+          </p>
+        </div>
+        <NewImportAction onImportSuccess={loadImports} />
       </div>
 
       <Card>

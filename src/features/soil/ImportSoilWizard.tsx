@@ -48,10 +48,12 @@ export function ImportSoilWizard({
   open,
   onOpenChange,
   campaigns,
+  onSuccess,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   campaigns: { id: string; name: string }[]
+  onSuccess?: () => void
 }) {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
@@ -129,6 +131,7 @@ export function ImportSoilWizard({
       toast({ title: 'Sucesso', description: 'Importação concluída.' })
       onOpenChange(false)
       window.dispatchEvent(new CustomEvent('refresh-soil-analyses'))
+      if (onSuccess) onSuccess()
     } catch (err: Error | any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
