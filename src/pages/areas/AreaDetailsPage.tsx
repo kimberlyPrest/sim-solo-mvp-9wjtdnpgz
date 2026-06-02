@@ -26,6 +26,8 @@ import {
 } from '@/components/ui/table'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { SeasonForm, SeasonFormData } from './SeasonForm'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { AreaMapTab } from '@/features/areas/AreaMapTab'
 
 export default function AreaDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -187,98 +189,113 @@ export default function AreaDetailsPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-1">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalhes</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {canEdit ? (
-                <AreaForm
-                  initialData={area}
-                  farms={farms}
-                  onSubmit={handleUpdate}
-                  isSubmitting={isSubmitting}
-                />
-              ) : (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Fazenda</p>
-                    <p>{farm?.name || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Área Declarada</p>
-                    <p>{area.declared_area_ha ? `${area.declared_area_ha} ha` : '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Observações</p>
-                    <p>{area.notes || '-'}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+      <Tabs defaultValue="details" className="w-full">
+        <TabsList className="mb-6">
+          <TabsTrigger value="details">Detalhes</TabsTrigger>
+          <TabsTrigger value="map">Mapa Geográfico</TabsTrigger>
+        </TabsList>
 
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Safras</CardTitle>
-              {canEdit && (
-                <Sheet open={isSeasonSheetOpen} onOpenChange={setIsSeasonSheetOpen}>
-                  <SheetTrigger asChild>
-                    <Button size="sm" variant="secondary">
-                      <Plus className="mr-2 h-4 w-4" /> Nova Safra
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-                    <SheetHeader className="mb-6">
-                      <SheetTitle>Cadastrar Safra</SheetTitle>
-                    </SheetHeader>
-                    <SeasonForm
-                      onSubmit={handleCreateSeason}
-                      isSubmitting={isSubmittingSeason}
-                      onCancel={() => setIsSeasonSheetOpen(false)}
+        <TabsContent value="details" className="mt-0">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Detalhes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {canEdit ? (
+                    <AreaForm
+                      initialData={area}
+                      farms={farms}
+                      onSubmit={handleUpdate}
+                      isSubmitting={isSubmitting}
                     />
-                  </SheetContent>
-                </Sheet>
-              )}
-            </CardHeader>
-            <CardContent>
-              {seasons.length === 0 ? (
-                <div className="py-8 text-center text-muted-foreground flex flex-col items-center">
-                  <Calendar className="h-8 w-8 mb-2 opacity-20" />
-                  Nenhuma safra cadastrada para esta área.
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ano/Safra</TableHead>
-                      <TableHead>Identificação</TableHead>
-                      <TableHead>Cultura</TableHead>
-                      <TableHead>Prod. Esperada</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {seasons.map((season) => (
-                      <TableRow key={season.id}>
-                        <TableCell className="font-medium">{season.season_year}</TableCell>
-                        <TableCell>{season.label || '-'}</TableCell>
-                        <TableCell>{season.crop || '-'}</TableCell>
-                        <TableCell>
-                          {season.expected_productivity ? `${season.expected_productivity}` : '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+                  ) : (
+                    <div className="space-y-4">
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Fazenda</p>
+                        <p>{farm?.name || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Área Declarada</p>
+                        <p>{area.declared_area_ha ? `${area.declared_area_ha} ha` : '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-muted-foreground">Observações</p>
+                        <p>{area.notes || '-'}</p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle>Safras</CardTitle>
+                  {canEdit && (
+                    <Sheet open={isSeasonSheetOpen} onOpenChange={setIsSeasonSheetOpen}>
+                      <SheetTrigger asChild>
+                        <Button size="sm" variant="secondary">
+                          <Plus className="mr-2 h-4 w-4" /> Nova Safra
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+                        <SheetHeader className="mb-6">
+                          <SheetTitle>Cadastrar Safra</SheetTitle>
+                        </SheetHeader>
+                        <SeasonForm
+                          onSubmit={handleCreateSeason}
+                          isSubmitting={isSubmittingSeason}
+                          onCancel={() => setIsSeasonSheetOpen(false)}
+                        />
+                      </SheetContent>
+                    </Sheet>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  {seasons.length === 0 ? (
+                    <div className="py-8 text-center text-muted-foreground flex flex-col items-center">
+                      <Calendar className="h-8 w-8 mb-2 opacity-20" />
+                      Nenhuma safra cadastrada para esta área.
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Ano/Safra</TableHead>
+                          <TableHead>Identificação</TableHead>
+                          <TableHead>Cultura</TableHead>
+                          <TableHead>Prod. Esperada</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {seasons.map((season) => (
+                          <TableRow key={season.id}>
+                            <TableCell className="font-medium">{season.season_year}</TableCell>
+                            <TableCell>{season.label || '-'}</TableCell>
+                            <TableCell>{season.crop || '-'}</TableCell>
+                            <TableCell>
+                              {season.expected_productivity
+                                ? `${season.expected_productivity}`
+                                : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="map" className="mt-0">
+          <AreaMapTab area={area} canEdit={canEdit} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
