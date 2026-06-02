@@ -4,8 +4,10 @@ import { AppSidebar } from './AppSidebar'
 import { Header } from './Header'
 import { useAuth } from '@/hooks/use-auth'
 
+import { supabase } from '@/lib/supabase/client'
+
 export function Layout() {
-  const { session, loading } = useAuth()
+  const { session, loading, organization } = useAuth()
 
   if (loading) {
     return (
@@ -20,6 +22,26 @@ export function Layout() {
 
   if (!session) {
     return <Navigate to="/login" replace />
+  }
+
+  if (!loading && session && !organization) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-muted/20 p-4">
+        <div className="text-center max-w-md bg-background p-8 rounded-xl shadow-sm border">
+          <h2 className="text-2xl font-bold mb-2">Acesso Pendente</h2>
+          <p className="text-muted-foreground mb-6">
+            Sua conta ainda não está vinculada a nenhuma organização no sistema. Por favor, contate
+            o administrador para liberar seu acesso.
+          </p>
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md"
+          >
+            Sair
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -1,26 +1,169 @@
-import { Map } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Plus, Search, Map } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/hooks/use-toast'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
+import { Badge } from '@/components/ui/badge'
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { AreaForm, AreaFormData } from './AreaForm'
 
 export default function AreasPage() {
+  const { organization, hasRole } = useAuth()
+  const [areas, setAreas] = useState<any[]>([])
+  const [farms, setFarms] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { toast } = useToast()
+
+  const canEdit = hasRole(['admin', 'technician'])
+
+  const fetchData = async () => {
+    if (!organization) return
+    setLoading(true)
+    const [areasRes, farmsRes] = await Promise.all([
+      supabase
+        .from('areas')
+        .select('*, farms(name, producers(name))')
+        .eq('organization_id', organization.id)
+        .order('name'),
+      supabase
+        .from('farms')
+        .select('id, name')
+        .eq('organization_id', organization.id)
+        .eq('status', 'active'),
+    ])
+    if (areasRes.data) setAreas(areasRes.data)
+    if (farmsRes.data) setFarms(farmsRes.data)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchData()
+  }, [organization])
+
+  const handleCreate = async (data: AreaFormData) => {
+    if (!organization) return
+    setIsSubmitting(true)
+    const { error } = await supabase.from('areas').insert([
+      {
+        ...data,
+        organization_id: organization.id,
+        status: 'active',
+      },
+    ])
+    setIsSubmitting(false)
+
+    if (error) {
+      toast({ title: 'Erro', description: error.message, variant: 'destructive' })
+    } else {
+      toast({ title: 'Sucesso', description: 'Área criada com sucesso.' })
+      setIsSheetOpen(false)
+      fetchData()
+    }
+  }
+
+  const filtered = areas.filter(
+    (a) =>
+      a.name.toLowerCase().includes(search.toLowerCase()) ||
+      (a.farms?.name && a.farms.name.toLowerCase().includes(search.toLowerCase())),
+  )
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Áreas / Talhões</h1>
-        <p className="text-muted-foreground">
-          Controle de áreas de cultivo e subdivisões produtivas.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Áreas / Talhões</h1>
+          <p className="text-muted-foreground">Controle de áreas de cultivo.</p>
+        </div>
+        {canEdit && (
+          <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
+            <SheetTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" /> Nova Área
+              </Button>
+            </SheetTrigger>
+            <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+              <SheetHeader className="mb-6">
+                <SheetTitle>Cadastrar Área</SheetTitle>
+              </SheetHeader>
+              <AreaForm
+                farms={farms}
+                onSubmit={handleCreate}
+                isSubmitting={isSubmitting}
+                onCancel={() => setIsSheetOpen(false)}
+              />
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
 
       <Card>
-        <CardContent className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-muted mb-4">
-            <Map className="h-8 w-8 text-muted-foreground" />
+        <div className="p-4 border-b">
+          <div className="relative max-w-sm">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar área..."
+              className="pl-8"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
-          <h2 className="text-xl font-semibold mb-2">Módulo em construção</h2>
-          <p className="text-muted-foreground max-w-sm">
-            O gerenciamento de áreas e talhões georreferenciados será liberado após a integração com
-            o banco de dados principal.
-          </p>
+        </div>
+        <CardContent className="p-0">
+          {loading ? (
+            <div className="p-8 text-center text-muted-foreground">Carregando...</div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Map className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+              <h3 className="text-lg font-medium">Nenhuma área encontrada</h3>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome da Área</TableHead>
+                    <TableHead>Fazenda</TableHead>
+                    <TableHead>Produtor</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((area) => (
+                    <TableRow key={area.id}>
+                      <TableCell className="font-medium">
+                        <Link to={`/areas/${area.id}`} className="hover:underline text-primary">
+                          {area.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{area.farms?.name || '-'}</TableCell>
+                      <TableCell>{area.farms?.producers?.name || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={area.status === 'active' ? 'default' : 'secondary'}>
+                          {area.status === 'active' ? 'Ativo' : 'Arquivado'}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

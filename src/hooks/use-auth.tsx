@@ -1,13 +1,31 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { User, Session } from '@supabase/supabase-js'
 import { supabase } from '@/lib/supabase/client'
+import { Database } from '@/lib/supabase/types'
+
+type MemberRole = Database['public']['Enums']['member_role']
+
+export interface Organization {
+  id: string
+  name: string
+  role: MemberRole
+}
+
+export interface Profile {
+  id: string
+  email: string
+  full_name: string | null
+}
 
 interface AuthContextType {
   user: User | null
   session: Session | null
+  profile: Profile | null
+  organization: Organization | null
   signUp: (email: string, password: string) => Promise<{ error: any }>
   signIn: (email: string, password: string) => Promise<{ error: any }>
   signOut: () => Promise<{ error: any }>
+  hasRole: (roles: MemberRole[]) => boolean
   loading: boolean
 }
 
@@ -22,7 +40,37 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [organization, setOrganization] = useState<Organization | null>(null)
   const [loading, setLoading] = useState(true)
+
+  const loadProfileAndOrg = async (userId: string) => {
+    const [profileRes, orgRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('id', userId).single(),
+      supabase
+        .from('organization_members')
+        .select('role, organizations(id, name)')
+        .eq('user_id', userId)
+        .limit(1)
+        .single(),
+    ])
+
+    if (profileRes.data) setProfile(profileRes.data)
+
+    if (orgRes.data && orgRes.data.organizations) {
+      const orgData = Array.isArray(orgRes.data.organizations)
+        ? orgRes.data.organizations[0]
+        : orgRes.data.organizations
+
+      setOrganization({
+        id: orgData.id,
+        name: orgData.name,
+        role: orgRes.data.role,
+      })
+    } else {
+      setOrganization(null)
+    }
+  }
 
   useEffect(() => {
     const {
@@ -30,13 +78,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } = supabase.auth.onAuthStateChange((event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
-      setLoading(false)
+      if (session?.user) {
+        loadProfileAndOrg(session.user.id).finally(() => setLoading(false))
+      } else {
+        setProfile(null)
+        setOrganization(null)
+        setLoading(false)
+      }
     })
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
-      setLoading(false)
+      if (session?.user) {
+        loadProfileAndOrg(session.user.id).finally(() => setLoading(false))
+      } else {
+        setLoading(false)
+      }
     })
 
     return () => subscription.unsubscribe()
@@ -61,8 +119,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error }
   }
 
+  const hasRole = (roles: MemberRole[]) => {
+    if (!organization) return false
+    return roles.includes(organization.role)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, signUp, signIn, signOut, loading }}>
+    <AuthContext.Provider
+      value={{ user, session, profile, organization, signUp, signIn, signOut, hasRole, loading }}
+    >
       {children}
     </AuthContext.Provider>
   )

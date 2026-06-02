@@ -1412,7 +1412,7 @@ export const Constants = {
 //   Policy "area_seasons_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "area_seasons_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "area_seasons_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: areas
@@ -1421,7 +1421,7 @@ export const Constants = {
 //   Policy "areas_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "areas_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "areas_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: audit_logs
@@ -1433,7 +1433,7 @@ export const Constants = {
 //   Policy "farms_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "farms_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "farms_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: import_files
@@ -1442,7 +1442,7 @@ export const Constants = {
 //   Policy "import_files_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "import_files_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "import_files_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: imports
@@ -1451,7 +1451,7 @@ export const Constants = {
 //   Policy "imports_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "imports_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "imports_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: lab_attributes
@@ -1466,7 +1466,7 @@ export const Constants = {
 //   Policy "lab_measurements_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "lab_measurements_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "lab_measurements_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: organization_members
@@ -1486,7 +1486,7 @@ export const Constants = {
 //   Policy "producers_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "producers_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "producers_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: profiles
@@ -1500,7 +1500,7 @@ export const Constants = {
 //   Policy "recommendation_items_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "recommendation_items_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "recommendation_items_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: recommendation_sets
@@ -1509,7 +1509,7 @@ export const Constants = {
 //   Policy "recommendation_sets_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "recommendation_sets_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "recommendation_sets_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: samples
@@ -1518,7 +1518,7 @@ export const Constants = {
 //   Policy "samples_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "samples_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "samples_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: sampling_campaigns
@@ -1527,7 +1527,7 @@ export const Constants = {
 //   Policy "sampling_campaigns_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "sampling_campaigns_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "sampling_campaigns_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 // Table: sampling_points
@@ -1536,7 +1536,7 @@ export const Constants = {
 //   Policy "sampling_points_insert" (INSERT, PERMISSIVE) roles={authenticated}
 //     WITH CHECK: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 //   Policy "sampling_points_select" (SELECT, PERMISSIVE) roles={authenticated}
-//     USING: (organization_id IN ( SELECT organization_members.organization_id    FROM organization_members   WHERE (organization_members.user_id = auth.uid())))
+//     USING: (organization_id IN ( SELECT get_user_organizations() AS get_user_organizations))
 //   Policy "sampling_points_update" (UPDATE, PERMISSIVE) roles={authenticated}
 //     USING: has_role_in_org(organization_id, ARRAY['admin'::member_role, 'technician'::member_role])
 
@@ -1548,50 +1548,38 @@ export const Constants = {
 //    SECURITY DEFINER
 //   AS $function$
 //   DECLARE
-//       old_data JSONB := NULL;
-//       new_data JSONB := NULL;
-//       org_id UUID := NULL;
-//       ent_id UUID := NULL;
+//     old_data JSONB := NULL;
+//     new_data JSONB := NULL;
+//     org_id UUID := NULL;
+//     ent_id UUID := NULL;
 //   BEGIN
-//       IF (TG_OP = 'UPDATE') THEN
-//           old_data := to_jsonb(OLD);
-//           new_data := to_jsonb(NEW);
-//           org_id := (new_data->>'organization_id')::UUID;
-//           ent_id := (new_data->>'id')::UUID;
-//       ELSIF (TG_OP = 'INSERT') THEN
-//           new_data := to_jsonb(NEW);
-//           org_id := (new_data->>'organization_id')::UUID;
-//           ent_id := (new_data->>'id')::UUID;
-//       ELSIF (TG_OP = 'DELETE') THEN
-//           old_data := to_jsonb(OLD);
-//           org_id := (old_data->>'organization_id')::UUID;
-//           ent_id := (old_data->>'id')::UUID;
-//       END IF;
+//     IF (TG_OP = 'UPDATE') THEN
+//         old_data := to_jsonb(OLD);
+//         new_data := to_jsonb(NEW);
+//         org_id := (new_data->>'organization_id')::UUID;
+//         ent_id := (new_data->>'id')::UUID;
+//     ELSIF (TG_OP = 'INSERT') THEN
+//         new_data := to_jsonb(NEW);
+//         org_id := (new_data->>'organization_id')::UUID;
+//         ent_id := (new_data->>'id')::UUID;
+//     ELSIF (TG_OP = 'DELETE') THEN
+//         old_data := to_jsonb(OLD);
+//         org_id := (old_data->>'organization_id')::UUID;
+//         ent_id := (old_data->>'id')::UUID;
+//     END IF;
 //
-//       IF ent_id IS NOT NULL THEN
-//           INSERT INTO public.audit_logs (
-//               organization_id,
-//               user_id,
-//               action,
-//               entity,
-//               entity_id,
-//               old_data,
-//               new_data
-//           ) VALUES (
-//               org_id,
-//               auth.uid(),
-//               TG_OP,
-//               TG_TABLE_NAME,
-//               ent_id,
-//               old_data,
-//               new_data
-//           );
-//       END IF;
+//     IF ent_id IS NOT NULL THEN
+//         INSERT INTO public.audit_logs (
+//             organization_id, user_id, action, entity, entity_id, old_data, new_data
+//         ) VALUES (
+//             org_id, auth.uid(), TG_OP, TG_TABLE_NAME, ent_id, old_data, new_data
+//         );
+//     END IF;
 //
-//       IF (TG_OP = 'DELETE') THEN
-//           RETURN OLD;
-//       END IF;
-//       RETURN NEW;
+//     IF (TG_OP = 'DELETE') THEN
+//         RETURN OLD;
+//     END IF;
+//     RETURN NEW;
 //   END;
 //   $function$
 //
@@ -1788,7 +1776,7 @@ export const Constants = {
 //    STABLE SECURITY DEFINER
 //    SET search_path TO 'public'
 //   AS $function$
-//       SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid();
+//     SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid();
 //   $function$
 //
 // FUNCTION handle_new_user()
@@ -1864,8 +1852,8 @@ export const Constants = {
 //    LANGUAGE plpgsql
 //   AS $function$
 //   BEGIN
-//       NEW.updated_at = NOW();
-//       RETURN NEW;
+//     NEW.updated_at = NOW();
+//     RETURN NEW;
 //   END;
 //   $function$
 //
@@ -1916,6 +1904,8 @@ export const Constants = {
 // --- INDEXES ---
 // Table: area_seasons
 //   CREATE UNIQUE INDEX area_seasons_area_id_season_year_key ON public.area_seasons USING btree (area_id, season_year)
+// Table: areas
+//   CREATE INDEX idx_areas_boundary ON public.areas USING gist (boundary)
 // Table: lab_attributes
 //   CREATE UNIQUE INDEX lab_attributes_code_key ON public.lab_attributes USING btree (code)
 // Table: lab_measurements
@@ -1924,3 +1914,4 @@ export const Constants = {
 //   CREATE UNIQUE INDEX idx_samples_point_depth ON public.samples USING btree (sampling_point_id, depth_from_cm, depth_to_cm)
 // Table: sampling_points
 //   CREATE UNIQUE INDEX idx_sampling_points_campaign_code ON public.sampling_points USING btree (campaign_id, code)
+//   CREATE INDEX idx_sampling_points_location ON public.sampling_points USING gist (location)
