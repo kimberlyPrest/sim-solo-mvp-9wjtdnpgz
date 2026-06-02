@@ -23,7 +23,8 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { Loader2, AlertTriangle, Plus } from 'lucide-react'
+import { NewCampaignModal } from '@/features/campaigns/NewCampaignModal'
 
 const formSchema = z.object({
   campaign_id: z.string().min(1, 'Campanha é obrigatória'),
@@ -49,13 +50,16 @@ export function ImportSoilWizard({
   onOpenChange,
   campaigns,
   onSuccess,
+  onCampaignCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   campaigns: { id: string; name: string }[]
   onSuccess?: () => void
+  onCampaignCreated?: (newId: string) => void
 }) {
   const [step, setStep] = useState(1)
+  const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
@@ -159,20 +163,31 @@ export function ImportSoilWizard({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Campanha</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {campaigns.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select onValueChange={field.onChange} value={field.value || undefined}>
+                        <FormControl>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {campaigns.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        type="button"
+                        onClick={() => setIsNewCampaignOpen(true)}
+                        title="Nova Campanha"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -317,6 +332,15 @@ export function ImportSoilWizard({
           </div>
         )}
       </SheetContent>
+
+      <NewCampaignModal
+        open={isNewCampaignOpen}
+        onOpenChange={setIsNewCampaignOpen}
+        onSuccess={(newId) => {
+          if (onCampaignCreated) onCampaignCreated(newId)
+          form.setValue('campaign_id', newId)
+        }}
+      />
     </Sheet>
   )
 }

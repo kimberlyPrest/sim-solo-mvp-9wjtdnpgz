@@ -39,43 +39,49 @@ export function NewImportAction({ onImportSuccess }: { onImportSuccess: () => vo
   const [isGeoWizardOpen, setIsGeoWizardOpen] = useState(false)
   const [isSoilWizardOpen, setIsSoilWizardOpen] = useState(false)
 
-  useEffect(() => {
+  const loadData = async () => {
     if (!organization || !user) return
-    async function loadData() {
-      try {
-        const { data: member } = await supabase
-          .from('organization_members')
-          .select('role')
-          .eq('organization_id', organization.id)
-          .eq('user_id', user.id)
-          .single()
+    setLoading(true)
+    try {
+      const { data: member } = await supabase
+        .from('organization_members')
+        .select('role')
+        .eq('organization_id', organization.id)
+        .eq('user_id', user.id)
+        .single()
 
-        setRole(member?.role || 'viewer')
+      setRole(member?.role || 'viewer')
 
-        if (member?.role === 'admin' || member?.role === 'technician') {
-          const [areasRes, campaignsRes] = await Promise.all([
-            supabase
-              .from('areas')
-              .select(`id, name, declared_area_ha, farms!inner(name)`)
-              .eq('organization_id', organization.id)
-              .order('name'),
-            supabase
-              .from('sampling_campaigns')
-              .select(`id, name, area_seasons!inner(area_id, areas!inner(name, farms!inner(name)))`)
-              .eq('organization_id', organization.id)
-              .order('name'),
-          ])
+      if (member?.role === 'admin' || member?.role === 'technician') {
+        const [areasRes, campaignsRes] = await Promise.all([
+          supabase
+            .from('areas')
+            .select(`id, name, declared_area_ha, farms!inner(name)`)
+            .eq('organization_id', organization.id)
+            .order('name'),
+          supabase
+            .from('sampling_campaigns')
+            .select(`id, name, area_seasons!inner(area_id, areas!inner(name, farms!inner(name)))`)
+            .eq('organization_id', organization.id)
+            .order('name'),
+        ])
 
-          if (areasRes.data) setAreas(areasRes.data)
-          if (campaignsRes.data) setCampaigns(campaignsRes.data)
-        }
-      } catch (err) {
-        console.error(err)
-      } finally {
-        setLoading(false)
+        if (areasRes.data) setAreas(areasRes.data)
+        if (campaignsRes.data) setCampaigns(campaignsRes.data)
       }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  useEffect(() => {
     loadData()
+
+    const handleRefresh = () => loadData()
+    window.addEventListener('refresh-campaigns', handleRefresh)
+    return () => window.removeEventListener('refresh-campaigns', handleRefresh)
   }, [organization, user])
 
   if (loading || role === 'viewer') return null
@@ -163,6 +169,9 @@ export function NewImportAction({ onImportSuccess }: { onImportSuccess: () => vo
             setIsGeoWizardOpen(false)
             onImportSuccess()
           }}
+          onCampaignCreated={async (newId) => {
+            await loadData()
+          }}
         />
       )}
 
@@ -174,6 +183,9 @@ export function NewImportAction({ onImportSuccess }: { onImportSuccess: () => vo
           onSuccess={() => {
             setIsSoilWizardOpen(false)
             onImportSuccess()
+          }}
+          onCampaignCreated={async (newId) => {
+            await loadData()
           }}
         />
       )}

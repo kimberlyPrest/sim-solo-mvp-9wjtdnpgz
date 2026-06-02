@@ -24,8 +24,9 @@ import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { GeoMap } from '@/components/map/GeoMap'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Loader2, AlertTriangle } from 'lucide-react'
+import { Loader2, AlertTriangle, Plus } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { NewCampaignModal } from '@/features/campaigns/NewCampaignModal'
 
 type PreviewData = {
   boundary: any
@@ -46,14 +47,17 @@ export function GeographicImportWizard({
   area,
   campaigns,
   onSuccess,
+  onCampaignCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
   area: { id: string; declared_area_ha: number | null }
   campaigns: { id: string; name: string }[]
   onSuccess: () => void
+  onCampaignCreated?: (newId: string) => void
 }) {
   const { organization } = useAuth()
+  const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
   const { toast } = useToast()
 
   const [step, setStep] = useState<1 | 2>(1)
@@ -280,27 +284,9 @@ export function GeographicImportWizard({
                 </div>
                 <div className="space-y-2">
                   <Label>Campanha Destino</Label>
-                  <Select value={campaignId} onValueChange={setCampaignId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {campaigns.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {action !== 'update_boundary' && (
-                  <div className="space-y-2">
-                    <Label>Campanha</Label>
+                  <div className="flex items-center gap-2">
                     <Select value={campaignId} onValueChange={setCampaignId}>
-                      <SelectTrigger>
+                      <SelectTrigger className="flex-1">
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
@@ -311,6 +297,46 @@ export function GeographicImportWizard({
                         ))}
                       </SelectContent>
                     </Select>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      type="button"
+                      onClick={() => setIsNewCampaignOpen(true)}
+                      title="Nova Campanha"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {action !== 'update_boundary' && (
+                  <div className="space-y-2">
+                    <Label>Campanha</Label>
+                    <div className="flex items-center gap-2">
+                      <Select value={campaignId} onValueChange={setCampaignId}>
+                        <SelectTrigger className="flex-1">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {campaigns.map((c: any) => (
+                            <SelectItem key={c.id} value={c.id}>
+                              {c.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        type="button"
+                        onClick={() => setIsNewCampaignOpen(true)}
+                        title="Nova Campanha"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 )}
                 <div className="space-y-2">
@@ -442,6 +468,16 @@ export function GeographicImportWizard({
           </div>
         )}
       </DialogContent>
+
+      <NewCampaignModal
+        open={isNewCampaignOpen}
+        onOpenChange={setIsNewCampaignOpen}
+        prefilledAreaId={area.id}
+        onSuccess={(newId) => {
+          if (onCampaignCreated) onCampaignCreated(newId)
+          setCampaignId(newId)
+        }}
+      />
     </Dialog>
   )
 }

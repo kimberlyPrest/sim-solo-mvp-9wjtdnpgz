@@ -14,12 +14,17 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
+import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { NewImportAction } from './NewImportAction'
+import { NewCampaignModal } from '@/features/campaigns/NewCampaignModal'
 
 export default function ImportsPage() {
-  const { organization } = useAuth()
+  const { organization, user } = useAuth()
   const [imports, setImports] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [role, setRole] = useState('viewer')
+  const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
 
   async function loadImports() {
     if (!organization) return
@@ -46,7 +51,16 @@ export default function ImportsPage() {
 
   useEffect(() => {
     loadImports()
-  }, [organization])
+    if (organization && user) {
+      supabase
+        .from('organization_members')
+        .select('role')
+        .eq('organization_id', organization.id)
+        .eq('user_id', user.id)
+        .single()
+        .then(({ data }) => setRole(data?.role || 'viewer'))
+    }
+  }, [organization, user])
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -57,7 +71,15 @@ export default function ImportsPage() {
             Histórico e central de processamento de arquivos externos.
           </p>
         </div>
-        <NewImportAction onImportSuccess={loadImports} />
+        <div className="flex items-center gap-2">
+          {role !== 'viewer' && (
+            <Button variant="outline" onClick={() => setIsNewCampaignOpen(true)}>
+              <Plus className="w-4 h-4 mr-2" />
+              Nova Campanha
+            </Button>
+          )}
+          <NewImportAction onImportSuccess={loadImports} />
+        </div>
       </div>
 
       <Card>
@@ -123,6 +145,14 @@ export default function ImportsPage() {
           )}
         </CardContent>
       </Card>
+
+      <NewCampaignModal
+        open={isNewCampaignOpen}
+        onOpenChange={setIsNewCampaignOpen}
+        onSuccess={() => {
+          window.dispatchEvent(new CustomEvent('refresh-campaigns'))
+        }}
+      />
     </div>
   )
 }
