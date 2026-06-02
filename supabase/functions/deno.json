@@ -1,6 +1,6 @@
 {
   "_versions": {
-    "parse-shapefile": 3,
+    "parse-shapefile": 4,
     "soil-analysis-excel": 1
   }
 }
