@@ -33,12 +33,31 @@ const formSchema = z.object({
   source: z.enum(['sim', 'historical_standardized']),
 })
 
-export function ImportSoilWizard({ open, onOpenChange, campaigns }: any) {
+type PreviewData = {
+  data: any[]
+  validationSummary: {
+    totalRows: number
+    matchedPoints: number
+    unmatchedPoints: number
+    errors: string[]
+    unknownColumns: string[]
+  }
+}
+
+export function ImportSoilWizard({
+  open,
+  onOpenChange,
+  campaigns,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  campaigns: { id: string; name: string }[]
+}) {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
-  const [previewData, setPreviewData] = useState<any>(null)
-  const [payload, setPayload] = useState<any>(null)
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+  const [payload, setPayload] = useState<Record<string, any> | null>(null)
   const { organization, session } = useAuth()
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -81,7 +100,7 @@ export function ImportSoilWizard({ open, onOpenChange, campaigns }: any) {
       setPreviewData(result)
       setPayload({ ...data, storagePath, originalName: file.name, fileSize: file.size })
       setStep(2)
-    } catch (err: any) {
+    } catch (err: Error | any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsUploading(false)
@@ -110,7 +129,7 @@ export function ImportSoilWizard({ open, onOpenChange, campaigns }: any) {
       toast({ title: 'Sucesso', description: 'Importação concluída.' })
       onOpenChange(false)
       window.dispatchEvent(new CustomEvent('refresh-soil-analyses'))
-    } catch (err: any) {
+    } catch (err: Error | any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsUploading(false)

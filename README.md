@@ -59,3 +59,11 @@ O vínculo pode ser feito via Dashboard do Supabase (tabela `organization_member
 
 ## Status
 Fase 1 concluída
+
+## 🗺️ Fluxos Principais
+
+### Importação Geográfica (Shapefile ZIP)
+O sistema permite o upload de arquivos `.zip` contendo os formatos `.shp`, `.shx` e `.dbf`. Ao submeter, uma Edge Function do Supabase (escrita em Deno) extrai o polígono da área e os pontos de amostragem. O usuário visualiza uma prévia no mapa e, ao confirmar, os dados são salvos nas tabelas `areas` e `sampling_points`.
+
+### Importação de Análises de Laboratório (Excel)
+Os usuários podem enviar resultados laboratoriais via arquivos `.xlsx`. O sistema lê as abas `SOLO_0_20` e `SOLO_20_40`, mapeando a coluna `PONTO` aos pontos de amostragem criados na importação geográfica. Os dados são registrados nas tabelas `samples` e `lab_measurements`.

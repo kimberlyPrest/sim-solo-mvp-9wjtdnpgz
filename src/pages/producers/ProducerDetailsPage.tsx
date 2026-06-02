@@ -16,6 +16,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { ProducerForm, ProducerFormData } from './ProducerForm'
+import { Tables } from '@/lib/supabase/types'
 import {
   Table,
   TableBody,
@@ -29,8 +30,8 @@ export default function ProducerDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const { organization, hasRole } = useAuth()
   const { toast } = useToast()
-  const [producer, setProducer] = useState<any>(null)
-  const [farms, setFarms] = useState<any[]>([])
+  const [producer, setProducer] = useState<Tables<'producers'> | null>(null)
+  const [farms, setFarms] = useState<Tables<'farms'>[]>([])
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -39,22 +40,33 @@ export default function ProducerDetailsPage() {
   const fetchData = async () => {
     if (!organization || !id) return
     setLoading(true)
-    const [prodRes, farmsRes] = await Promise.all([
-      supabase
-        .from('producers')
-        .select('*')
-        .eq('id', id)
-        .eq('organization_id', organization.id)
-        .single(),
-      supabase
-        .from('farms')
-        .select('*')
-        .eq('producer_id', id)
-        .eq('organization_id', organization.id),
-    ])
-    if (prodRes.data) setProducer(prodRes.data)
-    if (farmsRes.data) setFarms(farmsRes.data)
-    setLoading(false)
+    try {
+      const [prodRes, farmsRes] = await Promise.all([
+        supabase
+          .from('producers')
+          .select('*')
+          .eq('id', id)
+          .eq('organization_id', organization.id)
+          .single(),
+        supabase
+          .from('farms')
+          .select('*')
+          .eq('producer_id', id)
+          .eq('organization_id', organization.id),
+      ])
+      if (prodRes.error) throw prodRes.error
+      if (farmsRes.error) throw farmsRes.error
+      if (prodRes.data) setProducer(prodRes.data)
+      if (farmsRes.data) setFarms(farmsRes.data)
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

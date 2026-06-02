@@ -17,12 +17,14 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Tables } from '@/lib/supabase/types'
 import { FarmForm, FarmFormData } from './FarmForm'
 
 export default function FarmsPage() {
   const { organization, hasRole } = useAuth()
-  const [farms, setFarms] = useState<any[]>([])
-  const [producers, setProducers] = useState<any[]>([])
+  type FarmWithProducer = Tables<'farms'> & { producers: { name: string } | null }
+  const [farms, setFarms] = useState<FarmWithProducer[]>([])
+  const [producers, setProducers] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -34,21 +36,32 @@ export default function FarmsPage() {
   const fetchData = async () => {
     if (!organization) return
     setLoading(true)
-    const [farmsRes, prodRes] = await Promise.all([
-      supabase
-        .from('farms')
-        .select('*, producers(name)')
-        .eq('organization_id', organization.id)
-        .order('name'),
-      supabase
-        .from('producers')
-        .select('id, name')
-        .eq('organization_id', organization.id)
-        .eq('status', 'active'),
-    ])
-    if (farmsRes.data) setFarms(farmsRes.data)
-    if (prodRes.data) setProducers(prodRes.data)
-    setLoading(false)
+    try {
+      const [farmsRes, prodRes] = await Promise.all([
+        supabase
+          .from('farms')
+          .select('*, producers(name)')
+          .eq('organization_id', organization.id)
+          .order('name'),
+        supabase
+          .from('producers')
+          .select('id, name')
+          .eq('organization_id', organization.id)
+          .eq('status', 'active'),
+      ])
+      if (farmsRes.error) throw farmsRes.error
+      if (prodRes.error) throw prodRes.error
+      if (farmsRes.data) setFarms(farmsRes.data as any)
+      if (prodRes.data) setProducers(prodRes.data)
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as fazendas.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

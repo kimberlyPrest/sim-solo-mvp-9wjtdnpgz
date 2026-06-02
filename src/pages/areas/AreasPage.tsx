@@ -17,12 +17,16 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Tables } from '@/lib/supabase/types'
 import { AreaForm, AreaFormData } from './AreaForm'
 
 export default function AreasPage() {
   const { organization, hasRole } = useAuth()
-  const [areas, setAreas] = useState<any[]>([])
-  const [farms, setFarms] = useState<any[]>([])
+  type AreaWithFarm = Tables<'areas'> & {
+    farms: { name: string; producers: { name: string } | null } | null
+  }
+  const [areas, setAreas] = useState<AreaWithFarm[]>([])
+  const [farms, setFarms] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -34,21 +38,32 @@ export default function AreasPage() {
   const fetchData = async () => {
     if (!organization) return
     setLoading(true)
-    const [areasRes, farmsRes] = await Promise.all([
-      supabase
-        .from('areas')
-        .select('*, farms(name, producers(name))')
-        .eq('organization_id', organization.id)
-        .order('name'),
-      supabase
-        .from('farms')
-        .select('id, name')
-        .eq('organization_id', organization.id)
-        .eq('status', 'active'),
-    ])
-    if (areasRes.data) setAreas(areasRes.data)
-    if (farmsRes.data) setFarms(farmsRes.data)
-    setLoading(false)
+    try {
+      const [areasRes, farmsRes] = await Promise.all([
+        supabase
+          .from('areas')
+          .select('*, farms(name, producers(name))')
+          .eq('organization_id', organization.id)
+          .order('name'),
+        supabase
+          .from('farms')
+          .select('id, name')
+          .eq('organization_id', organization.id)
+          .eq('status', 'active'),
+      ])
+      if (areasRes.error) throw areasRes.error
+      if (farmsRes.error) throw farmsRes.error
+      if (areasRes.data) setAreas(areasRes.data as any)
+      if (farmsRes.data) setFarms(farmsRes.data)
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as áreas.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

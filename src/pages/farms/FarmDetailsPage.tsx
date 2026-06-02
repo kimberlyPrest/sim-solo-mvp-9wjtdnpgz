@@ -16,6 +16,7 @@ import {
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb'
 import { FarmForm, FarmFormData } from './FarmForm'
+import { Tables } from '@/lib/supabase/types'
 import {
   Table,
   TableBody,
@@ -29,9 +30,10 @@ export default function FarmDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const { organization, hasRole } = useAuth()
   const { toast } = useToast()
-  const [farm, setFarm] = useState<any>(null)
-  const [areas, setAreas] = useState<any[]>([])
-  const [producers, setProducers] = useState<any[]>([])
+  type FarmWithProducer = Tables<'farms'> & { producers: { name: string } | null }
+  const [farm, setFarm] = useState<FarmWithProducer | null>(null)
+  const [areas, setAreas] = useState<Tables<'areas'>[]>([])
+  const [producers, setProducers] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -40,20 +42,32 @@ export default function FarmDetailsPage() {
   const fetchData = async () => {
     if (!organization || !id) return
     setLoading(true)
-    const [farmRes, areasRes, prodRes] = await Promise.all([
-      supabase
-        .from('farms')
-        .select('*, producers(name)')
-        .eq('id', id)
-        .eq('organization_id', organization.id)
-        .single(),
-      supabase.from('areas').select('*').eq('farm_id', id).eq('organization_id', organization.id),
-      supabase.from('producers').select('id, name').eq('organization_id', organization.id),
-    ])
-    if (farmRes.data) setFarm(farmRes.data)
-    if (areasRes.data) setAreas(areasRes.data)
-    if (prodRes.data) setProducers(prodRes.data)
-    setLoading(false)
+    try {
+      const [farmRes, areasRes, prodRes] = await Promise.all([
+        supabase
+          .from('farms')
+          .select('*, producers(name)')
+          .eq('id', id)
+          .eq('organization_id', organization.id)
+          .single(),
+        supabase.from('areas').select('*').eq('farm_id', id).eq('organization_id', organization.id),
+        supabase.from('producers').select('id, name').eq('organization_id', organization.id),
+      ])
+      if (farmRes.error) throw farmRes.error
+      if (areasRes.error) throw areasRes.error
+      if (prodRes.error) throw prodRes.error
+      if (farmRes.data) setFarm(farmRes.data as any)
+      if (areasRes.data) setAreas(areasRes.data)
+      if (prodRes.data) setProducers(prodRes.data)
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

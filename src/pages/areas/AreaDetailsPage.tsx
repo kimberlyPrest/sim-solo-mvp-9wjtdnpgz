@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase/client'
 
+import { Tables } from '@/lib/supabase/types'
 import { AreaHistoricalAnalysisTab } from './tabs/AreaHistoricalAnalysisTab'
 import { AreaRecommendationsTab } from './tabs/AreaRecommendationsTab'
 import { AreaImportsTab } from './tabs/AreaImportsTab'
@@ -12,23 +13,32 @@ import { AreaImportsTab } from './tabs/AreaImportsTab'
 export default function AreaDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [area, setArea] = useState<any>(null)
+  type AreaDetails = Tables<'areas'> & {
+    farms: { name: string; producers: { name: string } | null } | null
+  }
+  const [area, setArea] = useState<AreaDetails | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadArea() {
       if (!id) return
-      const { data } = await supabase
-        .from('areas')
-        .select(`
-          *,
-          farms ( name, producers ( name ) )
-        `)
-        .eq('id', id)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from('areas')
+          .select(`
+            *,
+            farms ( name, producers ( name ) )
+          `)
+          .eq('id', id)
+          .single()
 
-      setArea(data)
-      setLoading(false)
+        if (error) throw error
+        setArea(data as any)
+      } catch (err: any) {
+        console.error('Erro ao carregar área', err)
+      } finally {
+        setLoading(false)
+      }
     }
     loadArea()
   }, [id])

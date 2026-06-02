@@ -24,12 +24,25 @@ import {
 } from '@/components/ui/drawer'
 import { Loader2 } from 'lucide-react'
 
-export function SoilAnalysisList({ campaigns }: any) {
-  const [data, setData] = useState<any[]>([])
+type Measurement = { attribute_code: string; numeric_value: number | null }
+type SampleRow = {
+  point_id: string
+  point_code: string
+  depth: string
+  ph: number | string
+  mo: number | string
+  p: number | string
+  k: number | string
+  v: number | string
+  measurements: Measurement[]
+}
+
+export function SoilAnalysisList({ campaigns }: { campaigns: { id: string; name: string }[] }) {
+  const [data, setData] = useState<SampleRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [selectedCampaign, setSelectedCampaign] = useState<string>('all')
   const [selectedDepth, setSelectedDepth] = useState<string>('all')
-  const [selectedSample, setSelectedSample] = useState<any>(null)
+  const [selectedSample, setSelectedSample] = useState<SampleRow | null>(null)
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -57,7 +70,7 @@ export function SoilAnalysisList({ campaigns }: any) {
       const { data: res, error } = await query
       if (error) throw error
 
-      const rows: any[] = []
+      const rows: SampleRow[] = []
       res?.forEach((point) => {
         point.samples.forEach((sample: any) => {
           const depthKey = `${sample.depth_from_cm}-${sample.depth_to_cm}`

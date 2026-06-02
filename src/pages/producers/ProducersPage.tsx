@@ -17,11 +17,12 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
+import { Tables } from '@/lib/supabase/types'
 import { ProducerForm, ProducerFormData } from './ProducerForm'
 
 export default function ProducersPage() {
   const { organization, hasRole } = useAuth()
-  const [producers, setProducers] = useState<any[]>([])
+  const [producers, setProducers] = useState<Tables<'producers'>[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
@@ -33,13 +34,23 @@ export default function ProducersPage() {
   const fetchProducers = async () => {
     if (!organization) return
     setLoading(true)
-    const { data, error } = await supabase
-      .from('producers')
-      .select('*')
-      .eq('organization_id', organization.id)
-      .order('name')
-    if (!error && data) setProducers(data)
-    setLoading(false)
+    try {
+      const { data, error } = await supabase
+        .from('producers')
+        .select('*')
+        .eq('organization_id', organization.id)
+        .order('name')
+      if (error) throw error
+      if (data) setProducers(data)
+    } catch (err: any) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os produtores.',
+        variant: 'destructive',
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {

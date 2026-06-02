@@ -12,6 +12,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase/client'
+import { Tables } from '@/lib/supabase/types'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
@@ -22,7 +23,9 @@ export default function DashboardPage() {
     areas: number
     hectares: number
     campaigns: number
-    recentImports: any[]
+    recentImports: (Tables<'imports'> & {
+      import_files: { original_name: string } | { original_name: string }[] | null
+    })[]
   } | null>(null)
   const [loading, setLoading] = useState(true)
 

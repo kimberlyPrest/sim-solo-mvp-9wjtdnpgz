@@ -27,7 +27,32 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
 
-export function GeographicImportWizard({ open, onOpenChange, area, campaigns, onSuccess }: any) {
+type PreviewData = {
+  boundary: any
+  points: { code: string; lng: number; lat: number }[]
+  calculatedAreaHa: number
+  divergencePct: number
+  validationSummary: {
+    boundaryValid: boolean
+    pointsInside: number
+    pointsOutside: number
+    outsideCodes: string[]
+  }
+}
+
+export function GeographicImportWizard({
+  open,
+  onOpenChange,
+  area,
+  campaigns,
+  onSuccess,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  area: { id: string; declared_area_ha: number | null }
+  campaigns: { id: string; name: string }[]
+  onSuccess: () => void
+}) {
   const { organization } = useAuth()
   const { toast } = useToast()
 
@@ -41,7 +66,7 @@ export function GeographicImportWizard({ open, onOpenChange, area, campaigns, on
   const [justification, setJustification] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
 
-  const [previewData, setPreviewData] = useState<any>(null)
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [importId, setImportId] = useState<string>('')
   const [filePath, setFilePath] = useState<string>('')
 
@@ -126,7 +151,7 @@ export function GeographicImportWizard({ open, onOpenChange, area, campaigns, on
       setImportId(newImportId)
       setFilePath(newFilePath)
       setStep(2)
-    } catch (err: any) {
+    } catch (err: Error | any) {
       toast({ title: 'Erro no processamento', description: err.message, variant: 'destructive' })
     } finally {
       setIsProcessing(false)
@@ -144,7 +169,7 @@ export function GeographicImportWizard({ open, onOpenChange, area, campaigns, on
       if (error) throw error
       toast({ title: 'Sucesso', description: 'Pontos reutilizados com sucesso.' })
       onSuccess()
-    } catch (err: any) {
+    } catch (err: Error | any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsProcessing(false)
@@ -173,7 +198,7 @@ export function GeographicImportWizard({ open, onOpenChange, area, campaigns, on
       if (error) throw error
       toast({ title: 'Sucesso', description: 'Importação concluída com sucesso.' })
       onSuccess()
-    } catch (err: any) {
+    } catch (err: Error | any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsProcessing(false)
