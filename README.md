@@ -41,5 +41,21 @@ npm run build
 npm run lint
 ```
 
+## 🗄️ Banco de Dados e Migrations
+
+Este projeto utiliza o Supabase e extensões geográficas (PostGIS).
+As migrations iniciais criam as tabelas e o seed da organização "SIM", com uma usuária admin `kimberly@adapta.org` / `Skip@Pass`.
+
+Para aplicar as migrations e o seed no ambiente local ou remoto:
+```bash
+npx supabase db push
+```
+
+### Associação Manual de Usuários
+Novos usuários podem criar contas, mas precisarão ser vinculados a uma organização para acessarem os dados. 
+O vínculo pode ser feito via Dashboard do Supabase (tabela `organization_members`):
+1. Verifique o ID do usuário na tabela `auth.users` ou `profiles`.
+2. Adicione uma nova linha na tabela `organization_members`, passando o `organization_id` correspondente, o `user_id`, e definindo a `role` (viewer, technician, admin).
+
 ## Status
 Fase 1 concluída
