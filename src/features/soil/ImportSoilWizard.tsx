@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { toast } from '@/hooks/use-toast'
@@ -65,6 +65,12 @@ export function ImportSoilWizard({
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [payload, setPayload] = useState<Record<string, any> | null>(null)
   const { organization, session } = useAuth()
+
+  const [localCampaigns, setLocalCampaigns] = useState<{ id: string; name: string }[]>(campaigns)
+
+  useEffect(() => {
+    setLocalCampaigns(campaigns)
+  }, [campaigns])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -171,7 +177,7 @@ export function ImportSoilWizard({
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {campaigns.map((c: any) => (
+                          {localCampaigns.map((c: any) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
                             </SelectItem>
@@ -336,9 +342,10 @@ export function ImportSoilWizard({
       <NewCampaignModal
         open={isNewCampaignOpen}
         onOpenChange={setIsNewCampaignOpen}
-        onSuccess={(newId) => {
-          if (onCampaignCreated) onCampaignCreated(newId)
-          form.setValue('campaign_id', newId)
+        onSuccess={(newCamp) => {
+          setLocalCampaigns((prev) => [...prev, newCamp])
+          form.setValue('campaign_id', newCamp.id)
+          if (onCampaignCreated) onCampaignCreated(newCamp.id)
         }}
       />
     </Sheet>

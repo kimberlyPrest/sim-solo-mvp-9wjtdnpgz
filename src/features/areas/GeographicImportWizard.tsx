@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -59,6 +59,12 @@ export function GeographicImportWizard({
   const { organization } = useAuth()
   const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
   const { toast } = useToast()
+
+  const [localCampaigns, setLocalCampaigns] = useState<{ id: string; name: string }[]>(campaigns)
+
+  useEffect(() => {
+    setLocalCampaigns(campaigns)
+  }, [campaigns])
 
   const [step, setStep] = useState<1 | 2>(1)
   const [isProcessing, setIsProcessing] = useState(false)
@@ -274,7 +280,7 @@ export function GeographicImportWizard({
                       <SelectValue placeholder="Selecione..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {campaigns.map((c: any) => (
+                      {localCampaigns.map((c: any) => (
                         <SelectItem key={c.id} value={c.id}>
                           {c.name}
                         </SelectItem>
@@ -290,7 +296,7 @@ export function GeographicImportWizard({
                         <SelectValue placeholder="Selecione..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {campaigns.map((c: any) => (
+                        {localCampaigns.map((c: any) => (
                           <SelectItem key={c.id} value={c.id}>
                             {c.name}
                           </SelectItem>
@@ -320,7 +326,7 @@ export function GeographicImportWizard({
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {campaigns.map((c: any) => (
+                          {localCampaigns.map((c: any) => (
                             <SelectItem key={c.id} value={c.id}>
                               {c.name}
                             </SelectItem>
@@ -473,9 +479,10 @@ export function GeographicImportWizard({
         open={isNewCampaignOpen}
         onOpenChange={setIsNewCampaignOpen}
         prefilledAreaId={area.id}
-        onSuccess={(newId) => {
-          if (onCampaignCreated) onCampaignCreated(newId)
-          setCampaignId(newId)
+        onSuccess={(newCamp) => {
+          setLocalCampaigns((prev) => [...prev, newCamp])
+          setCampaignId(newCamp.id)
+          if (onCampaignCreated) onCampaignCreated(newCamp.id)
         }}
       />
     </Dialog>
