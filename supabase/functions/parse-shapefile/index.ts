@@ -8,7 +8,7 @@ import * as turf from 'npm:@turf/turf@7.1.0'
 proj4.defs('EPSG:32723', '+proj=utm +zone=23 +south +datum=WGS84 +units=m +no_defs')
 
 const pointCodeKeys = ['ID', 'CODE', 'CODIGO', 'PONTO', 'id', 'code', 'codigo', 'ponto', 'name']
-const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 const transformCoordinates = (coordinates: any, sourceProjection: string): any => {
   if (sourceProjection === 'EPSG:4326') return coordinates

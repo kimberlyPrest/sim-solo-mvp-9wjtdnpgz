@@ -56,8 +56,24 @@ export function GeographicImportWizard({
   onSuccess: () => void
   onCampaignCreated?: (newId: string) => void
 }) {
-  const { organization } = useAuth()
+  const { organization } = useAuth() as any
+  const [orgId, setOrgId] = useState<string | null>(organization?.id || null)
   const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
+
+  useEffect(() => {
+    if (open && area.id && !organization?.id) {
+      supabase
+        .from('areas')
+        .select('organization_id')
+        .eq('id', area.id)
+        .single()
+        .then(({ data }) => {
+          if (data) setOrgId(data.organization_id)
+        })
+    } else if (organization?.id) {
+      setOrgId(organization.id)
+    }
+  }, [open, area.id, organization?.id])
   const { toast } = useToast()
 
   const [localCampaigns, setLocalCampaigns] = useState<{ id: string; name: string }[]>(campaigns)
@@ -134,19 +150,24 @@ export function GeographicImportWizard({
 
     setIsProcessing(true)
     try {
+      if (!orgId) throw new Error('Organização não identificada para esta área.')
       const ext = file.name.split('.').pop()
       const newImportId = crypto.randomUUID()
-      const newFilePath = `${organization?.id}/${newImportId}.${ext}`
+      const newFilePath = `${orgId}/${newImportId}.${ext}`
 
-      const { error: uploadError } = await supabase.storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from('soil-imports')
-        .upload(newFilePath, file)
+        .upload(newFilePath, file, {
+          upsert: true,
+        })
 
       if (uploadError) throw new Error(`Falha no upload: ${uploadError.message}`)
 
+      const actualPath = uploadData?.path || newFilePath
+
       const { data, error: fnError } = await supabase.functions.invoke('parse-shapefile', {
         body: {
-          storagePath: newFilePath,
+          storagePath: actualPath,
           action,
           declaredAreaHa: area.declared_area_ha,
           projection,
@@ -159,7 +180,7 @@ export function GeographicImportWizard({
 
       setPreviewData(data)
       setImportId(newImportId)
-      setFilePath(newFilePath)
+      setFilePath(actualPath)
       setStep(2)
     } catch (err: Error | any) {
       toast({ title: 'Erro no processamento', description: err.message, variant: 'destructive' })
@@ -174,7 +195,7 @@ export function GeographicImportWizard({
       const { error } = await supabase.rpc('reuse_campaign_points', {
         p_source_campaign_id: sourceCampaignId,
         p_target_campaign_id: campaignId,
-        p_org_id: organization?.id,
+        p_org_id: orgId as string,
       })
       if (error) throw error
       toast({ title: 'Sucesso', description: 'Pontos reutilizados com sucesso.' })
@@ -199,7 +220,7 @@ export function GeographicImportWizard({
         p_calculated_area_ha: previewData.calculatedAreaHa,
         p_source_srid: projection === 'EPSG:4326' ? 4326 : 32723,
         p_justification: justification,
-        p_org_id: organization?.id,
+        p_org_id: orgId as string,
         p_file_path: filePath,
         p_original_name: file?.name,
         p_file_size: file?.size,
