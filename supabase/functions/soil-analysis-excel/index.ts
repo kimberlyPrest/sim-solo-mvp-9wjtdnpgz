@@ -285,8 +285,39 @@ Deno.serve(async (req: Request) => {
         throw new Error(`Falha ao baixar arquivo: ${downloadError?.message}`)
 
       const arrayBuffer = await fileData.arrayBuffer()
+
+      // Pass 1: read only sheet names (no cell data) to avoid loading heavy sheets like
+      // Nutrição or Estratégias that can be 2+ MB each and exceed the worker memory limit.
+      const wbMeta = XLSX.read(arrayBuffer, { type: 'buffer', bookSheets: true })
+
+      // Find which sheet names match each depth alias before doing a full parse.
+      const targetSheetNames: string[] = []
+      const DEPTH_FROM_TO = [[0, 20], [20, 40]] as const
+      for (const [df, dt] of DEPTH_FROM_TO) {
+        const aliases = DEPTH_SHEET_ALIASES.find(([, d1, d2]) => d1 === df && d2 === dt)
+        if (!aliases) continue
+        const [names] = aliases
+        for (const sheetName of wbMeta.SheetNames) {
+          const upper = sheetName.trim().toUpperCase()
+          if (names.some((alias) => upper === alias || upper.startsWith(alias))) {
+            targetSheetNames.push(sheetName)
+            break
+          }
+        }
+      }
+
+      if (targetSheetNames.length === 0) {
+        const found = wbMeta.SheetNames.join(', ')
+        throw new Error(
+          `Nenhuma aba de análise encontrada. Abas no arquivo: [${found}]. ` +
+            `Use os nomes SOLO_0_20 / SOLO_20_40 (template oficial) ou 0 a 20 / 20 a 40 / 0.20 / 20.40 (formato NUTRISIM).`,
+        )
+      }
+
+      // Pass 2: parse only the two depth sheets, skipping all others.
       const wb = XLSX.read(arrayBuffer, {
         type: 'buffer',
+        sheets: targetSheetNames,
         cellFormula: false,
         cellHTML: false,
         cellStyles: false,
@@ -301,12 +332,9 @@ Deno.serve(async (req: Request) => {
       const ws0_20 = findDepthSheet(wb, 0, 20)
       const ws20_40 = findDepthSheet(wb, 20, 40)
 
+      // Guard shouldn't be reached (we threw earlier), but kept as safety net.
       if (!ws0_20 && !ws20_40) {
-        const found = wb.SheetNames.join(', ')
-        throw new Error(
-          `Nenhuma aba de análise encontrada. Abas no arquivo: [${found}]. ` +
-            `Use os nomes SOLO_0_20 / SOLO_20_40 (template oficial) ou 0 a 20 / 20 a 40 (formato NUTRISIM).`,
-        )
+        throw new Error('Nenhuma aba de análise encontrada após parsing seletivo.')
       }
 
       const { data: points, error: pointsError } = await supabase

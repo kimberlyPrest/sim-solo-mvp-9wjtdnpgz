@@ -75,7 +75,7 @@ export function ImportSoilWizard({
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { campaign_id: '', laboratory: '', source: 'sim' },
+    defaultValues: { campaign_id: '', laboratory: '', source: 'sim', sample_date: '', result_date: '' },
   })
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
