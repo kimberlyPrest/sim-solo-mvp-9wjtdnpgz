@@ -98,6 +98,41 @@ const DEPTH_SHEET_ALIASES: [string[], number, number][] = [
   [['SOLO_20_40', '20.40', '20 A 40', '20-40', '20_40', 'SOLO 20 40', '20A40'], 20, 40],
 ]
 
+// Recommendation tab aliases — detected but not imported by the soil analysis flow.
+// These sheets will be surfaced in validationSummary.detectedRecommendationSheets
+// for future use in the recommendations import flow (Phase E).
+const RECOMMENDATION_SHEET_ALIASES: [string, string][] = [
+  // [normalized alias, canonical name]
+  ['RELCORE', 'RELCORE'],
+  ['REL CORR', 'RELCORE'],
+  ['RELCORRETIVO', 'RELCORE'],
+  ['CORRETIVO', 'RELCORE'],
+  ['RELNUTRI', 'RELNUTRI'],
+  ['REL NUTRI', 'RELNUTRI'],
+  ['RELNUTRICIONAL', 'RELNUTRI'],
+  ['NUTRICIONAL', 'RELNUTRI'],
+  ['REL ORG', 'RELORG'],
+  ['RELORG', 'RELORG'],
+  ['ORGANICO', 'RELORG'],
+  ['ORGÂNICO', 'RELORG'],
+  ['REL ORGANICO', 'RELORG'],
+  ['REL ORGÂNICO', 'RELORG'],
+  ['LEIA_ME', 'LEIA_ME'],
+  ['LEIA ME', 'LEIA_ME'],
+  ['README', 'LEIA_ME'],
+]
+
+// Returns canonical names of any recommendation/metadata sheets found in the workbook.
+function detectRecommendationSheets(wb: XLSX.WorkBook): string[] {
+  const found: string[] = []
+  for (const sheetName of wb.SheetNames) {
+    const upper = sheetName.trim().toUpperCase()
+    const match = RECOMMENDATION_SHEET_ALIASES.find(([alias]) => upper === alias)
+    if (match && !found.includes(match[1])) found.push(match[1])
+  }
+  return found
+}
+
 // Returns the worksheet and its depth range, or null if not found.
 function findDepthSheet(
   wb: XLSX.WorkBook,
@@ -378,6 +413,8 @@ Deno.serve(async (req: Request) => {
       collectUnknown(ws0_20)
       collectUnknown(ws20_40)
 
+      const detectedRecommendationSheets = detectRecommendationSheets(wb)
+
       const validationSummary = {
         totalRows: allData.length,
         matchedPoints: allData.filter((d) => !d.errors.some((e: string) => e.startsWith('Ponto')))
@@ -386,6 +423,9 @@ Deno.serve(async (req: Request) => {
           .length,
         errors: allData.flatMap((d) => d.errors),
         unknownColumns: Array.from(unknownCols),
+        // Recommendation sheets present in this workbook but not imported by this flow.
+        // Surfaces RELCORE / RELNUTRI / Rel Org to the UI so it can inform the user.
+        detectedRecommendationSheets,
       }
 
       return new Response(JSON.stringify({ success: true, data: allData, validationSummary }), {
