@@ -1,18 +1,24 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, FileSpreadsheet, Activity, ClipboardList } from 'lucide-react'
+import { ArrowLeft, FileSpreadsheet, Activity, ClipboardList, Map, FlaskConical } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { supabase } from '@/lib/supabase/client'
+import { useAuth } from '@/hooks/use-auth'
 
 import { Tables } from '@/lib/supabase/types'
 import { AreaHistoricalAnalysisTab } from './tabs/AreaHistoricalAnalysisTab'
 import { AreaRecommendationsTab } from './tabs/AreaRecommendationsTab'
 import { AreaImportsTab } from './tabs/AreaImportsTab'
+import { AreaMapTab } from '@/features/areas/AreaMapTab'
+import { SoilAnalysisTab } from '@/features/soil/SoilAnalysisTab'
 
 export default function AreaDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const { hasRole } = useAuth()
+  const canEdit = hasRole(['admin', 'technician'])
+
   type AreaDetails = Tables<'areas'> & {
     farms: { name: string; producers: { name: string } | null } | null
   }
@@ -33,7 +39,7 @@ export default function AreaDetailsPage() {
           .single()
 
         if (error) throw error
-        setArea(data as any)
+        setArea(data as AreaDetails)
       } catch (err: any) {
         console.error('Erro ao carregar área', err)
       } finally {
@@ -60,8 +66,14 @@ export default function AreaDetailsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="history" className="w-full">
+      <Tabs defaultValue="map" className="w-full">
         <TabsList className="w-full justify-start overflow-x-auto">
+          <TabsTrigger value="map" className="flex items-center gap-2">
+            <Map className="h-4 w-4" /> Mapa
+          </TabsTrigger>
+          <TabsTrigger value="soil" className="flex items-center gap-2">
+            <FlaskConical className="h-4 w-4" /> Análises de Solo
+          </TabsTrigger>
           <TabsTrigger value="history" className="flex items-center gap-2">
             <Activity className="h-4 w-4" /> Histórico
           </TabsTrigger>
@@ -74,12 +86,20 @@ export default function AreaDetailsPage() {
         </TabsList>
 
         <div className="mt-6">
+          <TabsContent value="map">
+            <AreaMapTab area={area} canEdit={canEdit} />
+          </TabsContent>
+
+          <TabsContent value="soil">
+            <SoilAnalysisTab area={area} canEdit={canEdit} />
+          </TabsContent>
+
           <TabsContent value="history">
             <AreaHistoricalAnalysisTab areaId={id!} />
           </TabsContent>
 
           <TabsContent value="recommendations">
-            <AreaRecommendationsTab areaId={id!} />
+            <AreaRecommendationsTab areaId={id!} canEdit={canEdit} />
           </TabsContent>
 
           <TabsContent value="imports">
