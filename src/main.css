@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 @import 'leaflet/dist/leaflet.css';
 
 @tailwind base;
@@ -7,86 +7,102 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Dark agro-tech theme */
+    --background: 120 25% 5%;
+    --foreground: 120 10% 90%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card: 120 20% 8%;
+    --card-foreground: 120 10% 88%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover: 120 22% 9%;
+    --popover-foreground: 120 10% 90%;
 
-    /* Deep Forest Green - Primary */
-    --primary: 142 64% 24%;
-    --primary-foreground: 210 40% 98%;
+    /* Chartreuse/lime — Primary */
+    --primary: 85 72% 52%;
+    --primary-foreground: 120 25% 5%;
 
-    /* Earth Brown - Secondary */
-    --secondary: 27 79% 26%;
-    --secondary-foreground: 210 40% 98%;
+    /* Earth amber — Secondary */
+    --secondary: 35 65% 38%;
+    --secondary-foreground: 120 10% 90%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 120 15% 13%;
+    --muted-foreground: 120 8% 52%;
 
-    /* Precision Blue - Accent */
-    --accent: 199 98% 39%;
-    --accent-foreground: 210 40% 98%;
+    /* Cyan data accent */
+    --accent: 170 78% 40%;
+    --accent-foreground: 120 25% 5%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 142 64% 24%;
+    --border: 120 15% 16%;
+    --input: 120 15% 16%;
+    --ring: 85 72% 52%;
 
-    --radius: 0.5rem;
+    --radius: 0.375rem;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 222.2 84% 4.9%;
-    --sidebar-primary: 142 64% 24%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 40% 96.1%;
-    --sidebar-accent-foreground: 222.2 84% 4.9%;
-    --sidebar-border: 214.3 31.8% 91.4%;
-    --sidebar-ring: 142 64% 24%;
+    /* Sidebar — even darker */
+    --sidebar-background: 120 30% 4%;
+    --sidebar-foreground: 120 8% 82%;
+    --sidebar-primary: 85 72% 52%;
+    --sidebar-primary-foreground: 120 25% 5%;
+    --sidebar-accent: 120 15% 11%;
+    --sidebar-accent-foreground: 120 8% 82%;
+    --sidebar-border: 120 15% 12%;
+    --sidebar-ring: 85 72% 52%;
+
+    /* Soil classification tokens */
+    --soil-low: 0 80% 52%;
+    --soil-medium: 25 90% 55%;
+    --soil-adequate: 130 65% 44%;
+    --soil-high: 210 78% 56%;
+
+    /* Chart palette */
+    --chart-1: 85 72% 52%;
+    --chart-2: 170 78% 40%;
+    --chart-3: 35 65% 55%;
+    --chart-4: 210 78% 56%;
+    --chart-5: 300 55% 55%;
   }
 
+  /* Keep .dark in sync — tokens are always dark in this app */
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 142 64% 44%;
-    --primary-foreground: 222.2 84% 4.9%;
-
-    --secondary: 27 79% 46%;
-    --secondary-foreground: 222.2 84% 4.9%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 199 98% 49%;
-    --accent-foreground: 222.2 84% 4.9%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 142 64% 44%;
-
-    --sidebar-background: 222.2 84% 4.9%;
-    --sidebar-foreground: 210 40% 98%;
-    --sidebar-primary: 142 64% 44%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 217.2 32.6% 17.5%;
-    --sidebar-accent-foreground: 210 40% 98%;
-    --sidebar-border: 217.2 32.6% 17.5%;
-    --sidebar-ring: 142 64% 44%;
+    --background: 120 25% 5%;
+    --foreground: 120 10% 90%;
+    --card: 120 20% 8%;
+    --card-foreground: 120 10% 88%;
+    --popover: 120 22% 9%;
+    --popover-foreground: 120 10% 90%;
+    --primary: 85 72% 52%;
+    --primary-foreground: 120 25% 5%;
+    --secondary: 35 65% 38%;
+    --secondary-foreground: 120 10% 90%;
+    --muted: 120 15% 13%;
+    --muted-foreground: 120 8% 52%;
+    --accent: 170 78% 40%;
+    --accent-foreground: 120 25% 5%;
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 120 15% 16%;
+    --input: 120 15% 16%;
+    --ring: 85 72% 52%;
+    --sidebar-background: 120 30% 4%;
+    --sidebar-foreground: 120 8% 82%;
+    --sidebar-primary: 85 72% 52%;
+    --sidebar-primary-foreground: 120 25% 5%;
+    --sidebar-accent: 120 15% 11%;
+    --sidebar-accent-foreground: 120 8% 82%;
+    --sidebar-border: 120 15% 12%;
+    --sidebar-ring: 85 72% 52%;
+    --soil-low: 0 80% 52%;
+    --soil-medium: 25 90% 55%;
+    --soil-adequate: 130 65% 44%;
+    --soil-high: 210 78% 56%;
+    --chart-1: 85 72% 52%;
+    --chart-2: 170 78% 40%;
+    --chart-3: 35 65% 55%;
+    --chart-4: 210 78% 56%;
+    --chart-5: 300 55% 55%;
   }
 
   section[aria-label='Notifications alt+T'] {
@@ -102,4 +118,59 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.35s ease-out;
+  }
+  .font-mono-data {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Leaflet dark overrides */
+.leaflet-container {
+  background: #0a150a;
+  font-family: 'Inter', sans-serif;
+}
+.leaflet-popup-content-wrapper {
+  background: hsl(120 22% 9%);
+  color: hsl(120 10% 90%);
+  border: 1px solid hsl(120 15% 20%);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+}
+.leaflet-popup-tip {
+  background: hsl(120 22% 9%);
+}
+.leaflet-control-zoom a {
+  background: hsl(120 22% 9%) !important;
+  color: hsl(120 10% 80%) !important;
+  border-color: hsl(120 15% 20%) !important;
+}
+.leaflet-control-zoom a:hover {
+  background: hsl(120 20% 13%) !important;
+  color: hsl(85 72% 52%) !important;
+}
+.leaflet-control-attribution {
+  background: rgba(7, 15, 6, 0.7) !important;
+  color: hsl(120 8% 40%) !important;
+  font-size: 9px;
+}
+.leaflet-control-attribution a {
+  color: hsl(120 8% 50%) !important;
 }
