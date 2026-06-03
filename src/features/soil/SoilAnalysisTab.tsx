@@ -6,10 +6,19 @@ import { supabase } from '@/lib/supabase/client'
 import { ImportSoilWizard } from './ImportSoilWizard'
 import { SoilAnalysisList } from './SoilAnalysisList'
 import { toast } from '@/hooks/use-toast'
+import { Tables } from '@/lib/supabase/types'
 
-export function SoilAnalysisTab({ area, canEdit }: any) {
+type Campaign = { id: string; name: string }
+
+export function SoilAnalysisTab({
+  area,
+  canEdit,
+}: {
+  area: Tables<'areas'>
+  canEdit: boolean
+}) {
   const [isImportWizardOpen, setIsImportWizardOpen] = useState(false)
-  const [campaigns, setCampaigns] = useState<any[]>([])
+  const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const { session } = useAuth()
 
   useEffect(() => {
