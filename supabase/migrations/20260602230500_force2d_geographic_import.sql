@@ -86,7 +86,8 @@ BEGIN
       import_id, organization_id, file_path, storage_path, original_name, file_size, file_kind
     ) VALUES (
       p_import_id, p_org_id, p_file_path, p_file_path, p_original_name, p_file_size, 'geography'
-    );
+    )
+    ON CONFLICT (import_id, file_kind) DO NOTHING;
   END IF;
 
   IF p_action IN ('initial', 'update_boundary') THEN
@@ -133,5 +134,13 @@ BEGIN
   UPDATE public.imports
   SET status = 'committed', committed_at = NOW()
   WHERE id = p_import_id;
+
+EXCEPTION WHEN OTHERS THEN
+  UPDATE public.imports
+  SET status = 'failed',
+      error_summary = jsonb_build_object('message', SQLERRM, 'sqlstate', SQLSTATE),
+      updated_at = NOW()
+  WHERE id = p_import_id;
+  RAISE;
 END;
 $function$;
