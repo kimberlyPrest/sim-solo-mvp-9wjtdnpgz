@@ -304,7 +304,9 @@ export function ImportSoilWizard({
 
             {(previewData.validationSummary.detectedRecommendationSheets ?? []).length > 0 && (
               <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
-                <span className="font-semibold block mb-1">Abas detectadas (não importadas agora):</span>
+                <span className="font-semibold block mb-1">
+                  Abas detectadas (não importadas agora):
+                </span>
                 <p>
                   Seu arquivo contém{' '}
                   <strong>

@@ -114,7 +114,7 @@ export default function DashboardPage() {
         </div>
         <div className="flex gap-2">
           <Button asChild>
-            <Link to="/produtores">
+            <Link className="text-[0.89rem]" to="/produtores">
               <Users className="mr-2 h-4 w-4" />
               Cadastrar Produtor
             </Link>

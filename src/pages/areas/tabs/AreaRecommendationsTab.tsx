@@ -40,13 +40,7 @@ const setSchema = z.object({
   title: z.string().optional(),
 })
 
-export function AreaRecommendationsTab({
-  areaId,
-  canEdit,
-}: {
-  areaId: string
-  canEdit: boolean
-}) {
+export function AreaRecommendationsTab({ areaId, canEdit }: { areaId: string; canEdit: boolean }) {
   const [sets, setSets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
@@ -94,7 +88,11 @@ export function AreaRecommendationsTab({
 
     if (error) {
       setHasError(true)
-      toast({ title: 'Erro', description: 'Não foi possível carregar as recomendações.', variant: 'destructive' })
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar as recomendações.',
+        variant: 'destructive',
+      })
     }
     setSets(data || [])
     setLoading(false)
@@ -139,87 +137,87 @@ export function AreaRecommendationsTab({
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Conjuntos de Recomendação</h2>
         {canEdit && (
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="w-4 h-4 mr-2" /> Nova Recomendação
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Criar Recomendação</DialogTitle>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                <FormField
-                  control={form.control}
-                  name="campaign_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Campanha</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" /> Nova Recomendação
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Criar Recomendação</DialogTitle>
+              </DialogHeader>
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                  <FormField
+                    control={form.control}
+                    name="campaign_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Campanha</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {campaigns.map((c) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Nome Interno</FormLabel>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
+                          <Input placeholder="Ex: Correção Safra 23/24" {...field} />
                         </FormControl>
-                        <SelectContent>
-                          {campaigns.map((c) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome Interno</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ex: Correção Safra 23/24" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="kind"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="corrective">Corretiva</SelectItem>
-                          <SelectItem value="nutritional">Nutricional</SelectItem>
-                          <SelectItem value="organic">Orgânica</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <DialogFooter className="pt-4">
-                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                    Cancelar
-                  </Button>
-                  <Button type="submit">Salvar</Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="kind"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="corrective">Corretiva</SelectItem>
+                            <SelectItem value="nutritional">Nutricional</SelectItem>
+                            <SelectItem value="organic">Orgânica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <DialogFooter className="pt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                      Cancelar
+                    </Button>
+                    <Button type="submit">Salvar</Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
 

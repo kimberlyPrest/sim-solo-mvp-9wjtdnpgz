@@ -1,8 +1,17 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
-  ArrowLeft, Activity, ClipboardList, FileSpreadsheet,
-  MapPin, Upload, Crosshair, FlaskConical, TrendingUp, TrendingDown, Minus,
+  ArrowLeft,
+  Activity,
+  ClipboardList,
+  FileSpreadsheet,
+  MapPin,
+  Upload,
+  Crosshair,
+  FlaskConical,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -34,17 +43,17 @@ const DEPTH_OPTIONS = [
 ]
 
 const CATEGORY_COLORS = {
-  low:      '#ef4444',
-  medium:   '#f97316',
+  low: '#ef4444',
+  medium: '#f97316',
   adequate: '#22c55e',
-  high:     '#3b82f6',
+  high: '#3b82f6',
 } as const
 
 const CATEGORY_LABELS = {
-  low:      'Baixo',
-  medium:   'Médio',
+  low: 'Baixo',
+  medium: 'Médio',
   adequate: 'Adequado',
-  high:     'Alto',
+  high: 'Alto',
 } as const
 
 function StatPill({ label, value }: { label: string; value: string }) {
@@ -61,10 +70,13 @@ function DistributionBar({ points }: { points: SoilPointData[] }) {
   const withCat = points.filter((p) => p.category)
   if (withCat.length === 0) return null
 
-  const counts = cats.reduce((acc, c) => {
-    acc[c] = withCat.filter((p) => p.category === c).length
-    return acc
-  }, {} as Record<string, number>)
+  const counts = cats.reduce(
+    (acc, c) => {
+      acc[c] = withCat.filter((p) => p.category === c).length
+      return acc
+    },
+    {} as Record<string, number>,
+  )
 
   return (
     <div className="space-y-2">
@@ -83,17 +95,22 @@ function DistributionBar({ points }: { points: SoilPointData[] }) {
         })}
       </div>
       <div className="flex flex-wrap gap-x-3 gap-y-1">
-        {cats.filter((c) => counts[c] > 0).map((cat) => (
-          <span key={cat} className="flex items-center gap-1 text-[11px] text-muted-foreground">
-            <span
-              style={{
-                display: 'inline-block', width: 7, height: 7,
-                borderRadius: '50%', background: CATEGORY_COLORS[cat],
-              }}
-            />
-            {counts[cat]} {CATEGORY_LABELS[cat]}
-          </span>
-        ))}
+        {cats
+          .filter((c) => counts[c] > 0)
+          .map((cat) => (
+            <span key={cat} className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  background: CATEGORY_COLORS[cat],
+                }}
+              />
+              {counts[cat]} {CATEGORY_LABELS[cat]}
+            </span>
+          ))}
       </div>
     </div>
   )
@@ -173,10 +190,10 @@ export default function AreaDetailsPage() {
     setPointsLoading(true)
     supabase
       .rpc('get_campaign_points_with_attribute', {
-        p_campaign_id:    selectedCampaignId,
+        p_campaign_id: selectedCampaignId,
         p_attribute_code: selectedAttribute,
-        p_depth_from:     depthConfig.from,
-        p_depth_to:       depthConfig.to,
+        p_depth_from: depthConfig.from,
+        p_depth_to: depthConfig.to,
       })
       .then(({ data, error }) => {
         if (!error && data) setRawPoints(data as any)
@@ -202,7 +219,8 @@ export default function AreaDetailsPage() {
     }
   }, [coloredPoints])
 
-  const selectedAttrName = attributes.find((a) => a.code === selectedAttribute)?.name || selectedAttribute
+  const selectedAttrName =
+    attributes.find((a) => a.code === selectedAttribute)?.name || selectedAttribute
   const selectedCampaignName = campaigns.find((c) => c.id === selectedCampaignId)?.name || ''
 
   if (loading) {
@@ -222,7 +240,6 @@ export default function AreaDetailsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in-up pb-10">
-
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0">
@@ -239,7 +256,10 @@ export default function AreaDetailsPage() {
           </div>
           <p className="text-sm text-muted-foreground mt-0.5">
             {area.farms && (
-              <Link to={`/fazendas/${area.farms.id}`} className="hover:text-primary transition-colors">
+              <Link
+                to={`/fazendas/${area.farms.id}`}
+                className="hover:text-primary transition-colors"
+              >
                 {area.farms.name}
               </Link>
             )}
@@ -262,7 +282,6 @@ export default function AreaDetailsPage() {
 
       {/* Split layout: map + panel */}
       <div className="flex flex-col lg:flex-row gap-4" style={{ minHeight: 520 }}>
-
         {/* Map */}
         <div
           className="flex-1 min-w-0 relative rounded-xl overflow-hidden border border-border/60"
@@ -292,7 +311,9 @@ export default function AreaDetailsPage() {
             )}
             {pointsLoading && (
               <div className="bg-background/80 backdrop-blur border border-border/50 rounded-lg px-2.5 py-1">
-                <span className="font-mono text-[11px] text-muted-foreground animate-pulse">Carregando...</span>
+                <span className="font-mono text-[11px] text-muted-foreground animate-pulse">
+                  Carregando...
+                </span>
               </div>
             )}
           </div>
@@ -313,15 +334,18 @@ export default function AreaDetailsPage() {
 
         {/* Right panel */}
         <div className="lg:w-80 xl:w-96 shrink-0 flex flex-col gap-4">
-
           {/* Controls */}
           <div className="rounded-xl border border-border/60 bg-card p-4 space-y-4">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Visualização</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Visualização
+            </p>
 
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Campanha</label>
               {campaigns.length === 0 ? (
-                <p className="text-xs text-muted-foreground/60 py-1">Nenhuma campanha — importe um shapefile primeiro.</p>
+                <p className="text-xs text-muted-foreground/60 py-1">
+                  Nenhuma campanha — importe um shapefile primeiro.
+                </p>
               ) : (
                 <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
                   <SelectTrigger className="h-8 text-xs font-mono">
@@ -386,7 +410,9 @@ export default function AreaDetailsPage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground truncate pr-2">
                   {selectedAttrName}
                 </p>
-                <span className="font-mono text-[10px] text-muted-foreground shrink-0">{stats.n} pts</span>
+                <span className="font-mono text-[10px] text-muted-foreground shrink-0">
+                  {stats.n} pts
+                </span>
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -397,11 +423,19 @@ export default function AreaDetailsPage() {
 
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {Number(stats.max) - Number(stats.min) < 0.5 ? (
-                  <><Minus className="h-3 w-3 text-primary" /> Distribuição uniforme</>
+                  <>
+                    <Minus className="h-3 w-3 text-primary" /> Distribuição uniforme
+                  </>
                 ) : Number(stats.mean) > (Number(stats.min) + Number(stats.max)) / 2 ? (
-                  <><TrendingUp className="h-3 w-3" style={{ color: '#22c55e' }} /> Concentrado nos valores altos</>
+                  <>
+                    <TrendingUp className="h-3 w-3" style={{ color: '#22c55e' }} /> Concentrado nos
+                    valores altos
+                  </>
                 ) : (
-                  <><TrendingDown className="h-3 w-3" style={{ color: '#f97316' }} /> Concentrado nos valores baixos</>
+                  <>
+                    <TrendingDown className="h-3 w-3" style={{ color: '#f97316' }} /> Concentrado
+                    nos valores baixos
+                  </>
                 )}
               </div>
 
@@ -412,7 +446,12 @@ export default function AreaDetailsPage() {
               <FlaskConical className="h-7 w-7 opacity-20" />
               <p className="text-xs text-center">Sem dados de solo para este atributo.</p>
               {canEdit && (
-                <Button size="sm" variant="outline" className="mt-1" onClick={() => setSoilWizardOpen(true)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="mt-1"
+                  onClick={() => setSoilWizardOpen(true)}
+                >
                   <Upload className="h-3.5 w-3.5 mr-1.5" /> Importar Análise
                 </Button>
               )}
@@ -421,7 +460,9 @@ export default function AreaDetailsPage() {
 
           {/* Area meta */}
           <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Área</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Área
+            </p>
             <div className="space-y-1.5 text-xs">
               {area.declared_area_ha && (
                 <div className="flex justify-between">

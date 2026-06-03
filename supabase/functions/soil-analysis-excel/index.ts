@@ -46,7 +46,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   'PH CACL₂': 'PH_CACL2',
   'PH (CACL2)': 'PH_CACL2',
   'P REM': 'P_REM',
-  'PREM': 'P_REM',
+  PREM: 'P_REM',
   FÓSFORO: 'P_MELICH',
   FOSFORO: 'P_MELICH',
   'P MELICH': 'P_MELICH',
@@ -55,7 +55,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   'P RESINA': 'P_RES',
   'P RESIN': 'P_RES',
   'P (RESINA)': 'P_RES',
-  'MO': 'MO',
+  MO: 'MO',
   'M.O': 'MO',
   'M.O.': 'MO',
   'MATERIA ORGANICA': 'MO',
@@ -75,7 +75,7 @@ const COLUMN_ALIASES: Record<string, string> = {
   'SOMA DE BASES': 'SB',
   'CTC POTENCIAL': 'T',
   'CTC EFETIVA': 'T_EFETIVA',
-  't': 'T_EFETIVA',
+  t: 'T_EFETIVA',
   'V%': 'V',
   'SAT. BASES': 'V',
   'SAT BASES': 'V',
@@ -178,9 +178,7 @@ function detectHeaderRow(rows: unknown[][]): { headerIdx: number; dataStartIdx: 
           if (typeof cell === 'number') return false
           const s = String(cell)
           return (
-            s.includes('/') ||
-            /^(mg|cmol|g|%|-|dm|kg|ppm)/.test(s.toLowerCase()) ||
-            /^\W*$/.test(s)
+            s.includes('/') || /^(mg|cmol|g|%|-|dm|kg|ppm)/.test(s.toLowerCase()) || /^\W*$/.test(s)
           )
         })
       return { headerIdx: i, dataStartIdx: looksLikeUnits ? i + 2 : i + 1 }
@@ -383,7 +381,11 @@ Deno.serve(async (req: Request) => {
             if (isNaN(numVal)) {
               item.errors.push(`Valor não numérico para ${attrCode}: "${val}"`)
             } else {
-              item.measurements.push({ attribute_code: attrCode, numeric_value: numVal, text_value: null })
+              item.measurements.push({
+                attribute_code: attrCode,
+                numeric_value: numVal,
+                text_value: null,
+              })
             }
           })
 

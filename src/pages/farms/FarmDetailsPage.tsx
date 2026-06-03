@@ -1,8 +1,15 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import {
-  Archive, Plus, Layers, Calendar, Crosshair, ChevronRight,
-  MapPin, FlaskConical, ArrowLeft,
+  Archive,
+  Plus,
+  Layers,
+  Calendar,
+  Crosshair,
+  ChevronRight,
+  MapPin,
+  FlaskConical,
+  ArrowLeft,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -38,8 +45,16 @@ type FarmAreaData = {
 }
 
 const AREA_PALETTE = [
-  '#a8e63a', '#17c4af', '#f97316', '#3b82f6', '#a855f7',
-  '#ec4899', '#eab308', '#06b6d4', '#84cc16', '#f43f5e',
+  '#a8e63a',
+  '#17c4af',
+  '#f97316',
+  '#3b82f6',
+  '#a855f7',
+  '#ec4899',
+  '#eab308',
+  '#06b6d4',
+  '#84cc16',
+  '#f43f5e',
 ]
 
 export default function FarmDetailsPage() {
@@ -84,14 +99,20 @@ export default function FarmDetailsPage() {
         setAreas(areasData || [])
       }
     } catch (err: any) {
-      toast({ title: 'Erro', description: 'Não foi possível carregar os dados.', variant: 'destructive' })
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os dados.',
+        variant: 'destructive',
+      })
     } finally {
       setLoading(false)
       setMapLoading(false)
     }
   }
 
-  useEffect(() => { fetchData() }, [id, organization])
+  useEffect(() => {
+    fetchData()
+  }, [id, organization])
 
   const handleUpdate = async (data: FarmFormData) => {
     setIsSubmitting(true)
@@ -111,26 +132,30 @@ export default function FarmDetailsPage() {
     const { error } = await supabase.from('farms').update({ status: newStatus }).eq('id', id)
     if (error) toast({ title: 'Erro', description: error.message, variant: 'destructive' })
     else {
-      toast({ title: 'Sucesso', description: `Fazenda ${newStatus === 'active' ? 'reativada' : 'arquivada'}.` })
+      toast({
+        title: 'Sucesso',
+        description: `Fazenda ${newStatus === 'active' ? 'reativada' : 'arquivada'}.`,
+      })
       fetchData()
     }
   }
 
-  const mapFeatures = useMemo<MapFeature[]>(() =>
-    areas
-      .filter((a) => a.boundary)
-      .map((a, i) => ({
-        id: a.id,
-        name: a.name,
-        boundary: a.boundary,
-        color: AREA_PALETTE[i % AREA_PALETTE.length],
-      })),
-    [areas]
+  const mapFeatures = useMemo<MapFeature[]>(
+    () =>
+      areas
+        .filter((a) => a.boundary)
+        .map((a, i) => ({
+          id: a.id,
+          name: a.name,
+          boundary: a.boundary,
+          color: AREA_PALETTE[i % AREA_PALETTE.length],
+        })),
+    [areas],
   )
 
-  const totalArea = useMemo(() =>
-    areas.reduce((sum, a) => sum + (a.calculated_area_ha || a.declared_area_ha || 0), 0),
-    [areas]
+  const totalArea = useMemo(
+    () => areas.reduce((sum, a) => sum + (a.calculated_area_ha || a.declared_area_ha || 0), 0),
+    [areas],
   )
 
   const areasWithData = useMemo(() => areas.filter((a) => a.point_count > 0).length, [areas])
@@ -150,7 +175,6 @@ export default function FarmDetailsPage() {
 
   return (
     <div className="space-y-0 animate-fade-in-up pb-10">
-
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
@@ -160,13 +184,22 @@ export default function FarmDetailsPage() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold tracking-tight">{farm.name}</h1>
-              <Badge variant={farm.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+              <Badge
+                variant={farm.status === 'active' ? 'default' : 'secondary'}
+                className="text-xs"
+              >
                 {farm.status === 'active' ? 'Ativo' : 'Arquivado'}
               </Badge>
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
               {farm.producers?.name}
-              {farm.city && <> · {farm.city}{farm.state && `, ${farm.state}`}</>}
+              {farm.city && (
+                <>
+                  {' '}
+                  · {farm.city}
+                  {farm.state && `, ${farm.state}`}
+                </>
+              )}
             </p>
           </div>
         </div>
@@ -176,7 +209,9 @@ export default function FarmDetailsPage() {
             <>
               <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" size="sm">Editar</Button>
+                  <Button variant="outline" size="sm">
+                    Editar
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
@@ -200,7 +235,10 @@ export default function FarmDetailsPage() {
       </div>
 
       {/* Map Hero */}
-      <div className="relative rounded-xl overflow-hidden border border-border/60" style={{ height: 420 }}>
+      <div
+        className="relative rounded-xl overflow-hidden border border-border/60"
+        style={{ height: 420 }}
+      >
         {mapLoading ? (
           <div className="h-full flex items-center justify-center bg-card text-muted-foreground">
             <div className="flex flex-col items-center gap-2">
@@ -262,7 +300,9 @@ export default function FarmDetailsPage() {
         {mapFeatures.length > 0 && (
           <div className="absolute bottom-3 right-3 z-[1000] pointer-events-none">
             <div className="bg-background/70 backdrop-blur border border-border/50 rounded px-2 py-1">
-              <span className="text-[10px] font-mono text-muted-foreground">Clique em um talhão para detalhes</span>
+              <span className="text-[10px] font-mono text-muted-foreground">
+                Clique em um talhão para detalhes
+              </span>
             </div>
           </div>
         )}
@@ -271,7 +311,9 @@ export default function FarmDetailsPage() {
       {/* Area Cards */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Talhões</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            Talhões
+          </h2>
           {canEdit && (
             <Button size="sm" variant="outline" asChild>
               <Link to="/areas">
@@ -309,7 +351,9 @@ export default function FarmDetailsPage() {
                         {area.name}
                       </p>
                       {area_ha ? (
-                        <p className="font-mono text-xs text-muted-foreground">{Number(area_ha).toFixed(2)} ha</p>
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {Number(area_ha).toFixed(2)} ha
+                        </p>
                       ) : (
                         <p className="font-mono text-xs text-muted-foreground">— ha</p>
                       )}
@@ -332,7 +376,10 @@ export default function FarmDetailsPage() {
                     {area.last_sample_date && (
                       <span className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {new Date(area.last_sample_date).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })}
+                        {new Date(area.last_sample_date).toLocaleDateString('pt-BR', {
+                          month: 'short',
+                          year: '2-digit',
+                        })}
                       </span>
                     )}
                   </div>

@@ -22,31 +22,34 @@ export type MapFeature = {
 }
 
 const CATEGORY_COLORS: Record<SoilCategory, { fill: string; border: string }> = {
-  low:      { fill: '#ef4444', border: '#dc2626' },
-  medium:   { fill: '#f97316', border: '#ea580c' },
+  low: { fill: '#ef4444', border: '#dc2626' },
+  medium: { fill: '#f97316', border: '#ea580c' },
   adequate: { fill: '#22c55e', border: '#16a34a' },
-  high:     { fill: '#3b82f6', border: '#2563eb' },
+  high: { fill: '#3b82f6', border: '#2563eb' },
 }
 
 const CATEGORY_LABELS: Record<SoilCategory, string> = {
-  low:      'Baixo',
-  medium:   'Médio',
+  low: 'Baixo',
+  medium: 'Médio',
   adequate: 'Adequado',
-  high:     'Alto',
+  high: 'Alto',
 }
 
 const TILE_URLS = {
-  dark:      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+  satellite:
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
 }
 
 const TILE_ATTRS = {
-  dark:      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+  dark: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   satellite: 'Tiles &copy; Esri',
 }
 
 function makePointIcon(category?: SoilCategory, size = 14) {
-  const colors = category ? CATEGORY_COLORS[category] : { fill: 'hsl(85 72% 52%)', border: 'hsl(85 72% 38%)' }
+  const colors = category
+    ? CATEGORY_COLORS[category]
+    : { fill: 'hsl(85 72% 52%)', border: 'hsl(85 72% 38%)' }
   return L.divIcon({
     className: '',
     html: `<div style="width:${size}px;height:${size}px;background:${colors.fill};border-radius:50%;border:2px solid ${colors.border};box-shadow:0 0 6px ${colors.fill}80;"></div>`,
@@ -55,7 +58,15 @@ function makePointIcon(category?: SoilCategory, size = 14) {
   })
 }
 
-function MapBounds({ features, boundary, points }: { features?: MapFeature[]; boundary?: any; points?: SoilPointData[] }) {
+function MapBounds({
+  features,
+  boundary,
+  points,
+}: {
+  features?: MapFeature[]
+  boundary?: any
+  points?: SoilPointData[]
+}) {
   const map = useMap()
 
   useEffect(() => {
@@ -63,12 +74,16 @@ function MapBounds({ features, boundary, points }: { features?: MapFeature[]; bo
 
     features?.forEach((f) => {
       if (f.boundary) {
-        try { bounds.extend(L.geoJSON(f.boundary).getBounds()) } catch {}
+        try {
+          bounds.extend(L.geoJSON(f.boundary).getBounds())
+        } catch {}
       }
     })
 
     if (boundary) {
-      try { bounds.extend(L.geoJSON(boundary).getBounds()) } catch {}
+      try {
+        bounds.extend(L.geoJSON(boundary).getBounds())
+      } catch {}
     }
 
     points?.forEach((p) => {
@@ -101,13 +116,23 @@ function Legend({ categories }: { categories: SoilCategory[] }) {
     >
       {categories.map((cat) => (
         <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <div style={{
-            width: 10, height: 10, borderRadius: '50%',
-            background: CATEGORY_COLORS[cat].fill,
-            boxShadow: `0 0 4px ${CATEGORY_COLORS[cat].fill}`,
-            flexShrink: 0,
-          }} />
-          <span style={{ fontSize: 11, color: 'hsl(120 10% 80%)', fontFamily: 'IBM Plex Mono, monospace' }}>
+          <div
+            style={{
+              width: 10,
+              height: 10,
+              borderRadius: '50%',
+              background: CATEGORY_COLORS[cat].fill,
+              boxShadow: `0 0 4px ${CATEGORY_COLORS[cat].fill}`,
+              flexShrink: 0,
+            }}
+          />
+          <span
+            style={{
+              fontSize: 11,
+              color: 'hsl(120 10% 80%)',
+              fontFamily: 'IBM Plex Mono, monospace',
+            }}
+          >
             {CATEGORY_LABELS[cat]}
           </span>
         </div>
@@ -138,14 +163,25 @@ export function GeoMap({
   const presentCategories = useMemo<SoilCategory[]>(() => {
     if (!points || points.length === 0) return []
     const cats = new Set<SoilCategory>()
-    points.forEach((p) => { if (p.category) cats.add(p.category) })
+    points.forEach((p) => {
+      if (p.category) cats.add(p.category)
+    })
     return Array.from(cats)
   }, [points])
 
   const primaryColor = 'hsl(85, 72%, 52%)'
 
   return (
-    <div style={{ height, width: '100%', borderRadius: '0.5rem', overflow: 'hidden', zIndex: 0, position: 'relative' }}>
+    <div
+      style={{
+        height,
+        width: '100%',
+        borderRadius: '0.5rem',
+        overflow: 'hidden',
+        zIndex: 0,
+        position: 'relative',
+      }}
+    >
       <MapContainer
         center={[-15, -50]}
         zoom={4}
@@ -171,7 +207,6 @@ export function GeoMap({
             }}
           />
         )}
-
         {/* Multiple area features */}
         {features?.map((f) => {
           if (!f.boundary) return null
@@ -192,7 +227,13 @@ export function GeoMap({
               }}
             >
               <Popup>
-                <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'hsl(120 10% 90%)' }}>
+                <div
+                  style={{
+                    fontFamily: 'IBM Plex Mono, monospace',
+                    fontSize: 12,
+                    color: 'hsl(120 10% 90%)',
+                  }}
+                >
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>{f.name}</div>
                 </div>
               </Popup>
@@ -204,16 +245,34 @@ export function GeoMap({
         {points?.map((p) => (
           <Marker key={p.id} position={[p.lat, p.lng]} icon={makePointIcon(p.category)}>
             <Popup>
-              <div style={{ fontFamily: 'IBM Plex Mono, monospace', fontSize: 12, color: 'hsl(120 10% 90%)', minWidth: 100 }}>
-                <div style={{ fontWeight: 600, marginBottom: 4, color: 'hsl(85 72% 60%)' }}>Ponto {p.code}</div>
+              <div
+                style={{
+                  fontFamily: 'IBM Plex Mono, monospace',
+                  fontSize: 12,
+                  color: 'hsl(120 10% 90%)',
+                  minWidth: 100,
+                }}
+              >
+                <div style={{ fontWeight: 600, marginBottom: 4, color: 'hsl(85 72% 60%)' }}>
+                  Ponto {p.code}
+                </div>
                 {p.value != null && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
                     <span style={{ color: 'hsl(120 8% 55%)' }}>valor</span>
-                    <span style={{ fontWeight: 500 }}>{typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</span>
+                    <span style={{ fontWeight: 500 }}>
+                      {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
+                    </span>
                   </div>
                 )}
                 {p.category && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginTop: 2 }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      gap: 12,
+                      marginTop: 2,
+                    }}
+                  >
                     <span style={{ color: 'hsl(120 8% 55%)' }}>classe</span>
                     <span style={{ color: CATEGORY_COLORS[p.category].fill, fontWeight: 500 }}>
                       {CATEGORY_LABELS[p.category]}
@@ -224,10 +283,8 @@ export function GeoMap({
             </Popup>
           </Marker>
         ))}
-
         <MapBounds features={features} boundary={boundary} points={points} />
       </MapContainer>
-
       {showLegend && presentCategories.length > 0 && <Legend categories={presentCategories} />}
     </div>
   )
