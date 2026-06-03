@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         .from('organization_members')
         .select('role, organizations(id, name)')
         .eq('user_id', userId)
+        .order('created_at', { ascending: true })
         .limit(1)
         .single(),
     ])

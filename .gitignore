@@ -42,9 +42,12 @@ screenshot.png
 .eslintcache
 .oxlintcache
 
-# Environment variables
-.env*
-!.env
+# Environment variables — never commit real credentials
+.env
+.env.*
+.env.local
+.env.*.local
+!.env.example
 
 # Linux kernel core dumps (e.g. when oxfmt or pnpm crash)
 core.[0-9]*

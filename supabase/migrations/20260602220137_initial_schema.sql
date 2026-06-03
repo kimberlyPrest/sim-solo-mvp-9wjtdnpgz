@@ -507,7 +507,8 @@ BEGIN
       import_id, organization_id, file_path, storage_path, original_name, file_size, file_kind
     ) VALUES (
       p_import_id, p_org_id, p_file_path, p_file_path, p_original_name, p_file_size, 'geography'
-    );
+    )
+    ON CONFLICT (import_id, file_kind) DO NOTHING;
   END IF;
 
   IF p_action IN ('initial', 'update_boundary') THEN
@@ -552,6 +553,14 @@ BEGIN
   UPDATE public.imports
   SET status = 'committed', committed_at = NOW()
   WHERE id = p_import_id;
+
+EXCEPTION WHEN OTHERS THEN
+  UPDATE public.imports
+  SET status = 'failed',
+      error_summary = jsonb_build_object('message', SQLERRM, 'sqlstate', SQLSTATE),
+      updated_at = NOW()
+  WHERE id = p_import_id;
+  RAISE;
 END;
 $function$;
 
@@ -783,43 +792,12 @@ BEGIN
   END LOOP;
 END $$;
 
--- Seed Auth User and Organization
-DO $$
-DECLARE
-  new_user_id uuid;
-  new_org_id uuid;
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM auth.users WHERE email = 'kimberly@adapta.org') THEN
-    new_user_id := gen_random_uuid();
-    INSERT INTO auth.users (
-      id, instance_id, email, encrypted_password, email_confirmed_at,
-      created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
-      is_super_admin, role, aud,
-      confirmation_token, recovery_token, email_change_token_new,
-      email_change, email_change_token_current,
-      phone, phone_change, phone_change_token, reauthentication_token
-    ) VALUES (
-      new_user_id,
-      '00000000-0000-0000-0000-000000000000',
-      'kimberly@adapta.org',
-      crypt('Skip@Pass', gen_salt('bf')),
-      NOW(), NOW(), NOW(),
-      '{"provider": "email", "providers": ["email"]}',
-      '{"name": "Kimberly"}',
-      false, 'authenticated', 'authenticated',
-      '', '', '', '', '', NULL, '', '', ''
-    );
-
-    INSERT INTO public.profiles (id, email, full_name)
-    VALUES (new_user_id, 'kimberly@adapta.org', 'Kimberly')
-    ON CONFLICT (id) DO NOTHING;
-    
-    INSERT INTO public.organizations (id, name)
-    VALUES (gen_random_uuid(), 'SIM')
-    RETURNING id INTO new_org_id;
-
-    INSERT INTO public.organization_members (organization_id, user_id, role)
-    VALUES (new_org_id, new_user_id, 'admin')
-    ON CONFLICT DO NOTHING;
-  END IF;
-END $$;
+-- Seed Organization SIM (no user — bootstrap manually via Supabase Auth Dashboard)
+-- Steps after applying this migration:
+--   1. Go to Supabase Auth Dashboard → Users → Add User
+--   2. Copy the new user's UUID
+--   3. Run: INSERT INTO public.organization_members (organization_id, user_id, role)
+--           SELECT o.id, '<your-uuid>', 'admin' FROM public.organizations o WHERE o.name = 'SIM';
+INSERT INTO public.organizations (name)
+SELECT 'SIM'
+WHERE NOT EXISTS (SELECT 1 FROM public.organizations WHERE name = 'SIM');

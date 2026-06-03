@@ -33,6 +33,162 @@ const EXPECTED_COLUMNS = [
   'ARGILA',
 ]
 
+// Maps normalized (trimmed+uppercase) NUTRISIM column name variants to official attribute codes.
+// The NUTRISIM planilhas may use abbreviated or differently-formatted headers.
+const COLUMN_ALIASES: Record<string, string> = {
+  PH: 'PH_H2O',
+  'PH H2O': 'PH_H2O',
+  'PH H₂O': 'PH_H2O',
+  'PH (H2O)': 'PH_H2O',
+  'PH AGUA': 'PH_H2O',
+  'PH ÁGUA': 'PH_H2O',
+  'PH CACL2': 'PH_CACL2',
+  'PH CACL₂': 'PH_CACL2',
+  'PH (CACL2)': 'PH_CACL2',
+  'P REM': 'P_REM',
+  'PREM': 'P_REM',
+  FÓSFORO: 'P_MELICH',
+  FOSFORO: 'P_MELICH',
+  'P MELICH': 'P_MELICH',
+  'P MEHLICH': 'P_MELICH',
+  'P (MEHLICH)': 'P_MELICH',
+  'P RESINA': 'P_RES',
+  'P RESIN': 'P_RES',
+  'P (RESINA)': 'P_RES',
+  'MO': 'MO',
+  'M.O': 'MO',
+  'M.O.': 'MO',
+  'MATERIA ORGANICA': 'MO',
+  'MATÉRIA ORGÂNICA': 'MO',
+  'K RESINA': 'K_RES',
+  'K (RESINA)': 'K_RES',
+  ENXOFRE: 'S',
+  CALCIO: 'CA',
+  CÁLCIO: 'CA',
+  MAGNESIO: 'MG',
+  MAGNÉSIO: 'MG',
+  ALUMINIO: 'AL',
+  ALUMÍNIO: 'AL',
+  'H+AL': 'H_AL',
+  'H + AL': 'H_AL',
+  'H AL': 'H_AL',
+  'SOMA DE BASES': 'SB',
+  'CTC POTENCIAL': 'T',
+  'CTC EFETIVA': 'T_EFETIVA',
+  't': 'T_EFETIVA',
+  'V%': 'V',
+  'SAT. BASES': 'V',
+  'SAT BASES': 'V',
+  'M%': 'M',
+  'SAT. ALUMINIO': 'M',
+  'SAT ALUMINIO': 'M',
+  'SAT. ALUMÍNIO': 'M',
+  BORO: 'B',
+  COBRE: 'CU',
+  FERRO: 'FE',
+  MANGANES: 'MN',
+  MANGANÊS: 'MN',
+  ZINCO: 'ZN',
+}
+
+// Tab name aliases for NUTRISIM historical planilhas and official template.
+// Keys are normalized (trimmed+uppercase). Values are [depthFrom, depthTo].
+const DEPTH_SHEET_ALIASES: [string[], number, number][] = [
+  [['SOLO_0_20', '0.20', '0 A 20', '0-20', '0_20', 'SOLO 0 20', '0A20'], 0, 20],
+  [['SOLO_20_40', '20.40', '20 A 40', '20-40', '20_40', 'SOLO 20 40', '20A40'], 20, 40],
+]
+
+// Recommendation tab aliases — detected but not imported by the soil analysis flow.
+// These sheets will be surfaced in validationSummary.detectedRecommendationSheets
+// for future use in the recommendations import flow (Phase E).
+const RECOMMENDATION_SHEET_ALIASES: [string, string][] = [
+  // [normalized alias, canonical name]
+  ['RELCORE', 'RELCORE'],
+  ['REL CORR', 'RELCORE'],
+  ['RELCORRETIVO', 'RELCORE'],
+  ['CORRETIVO', 'RELCORE'],
+  ['RELNUTRI', 'RELNUTRI'],
+  ['REL NUTRI', 'RELNUTRI'],
+  ['RELNUTRICIONAL', 'RELNUTRI'],
+  ['NUTRICIONAL', 'RELNUTRI'],
+  ['REL ORG', 'RELORG'],
+  ['RELORG', 'RELORG'],
+  ['ORGANICO', 'RELORG'],
+  ['ORGÂNICO', 'RELORG'],
+  ['REL ORGANICO', 'RELORG'],
+  ['REL ORGÂNICO', 'RELORG'],
+  ['LEIA_ME', 'LEIA_ME'],
+  ['LEIA ME', 'LEIA_ME'],
+  ['README', 'LEIA_ME'],
+]
+
+// Returns canonical names of any recommendation/metadata sheets found in the workbook.
+function detectRecommendationSheets(wb: XLSX.WorkBook): string[] {
+  const found: string[] = []
+  for (const sheetName of wb.SheetNames) {
+    const upper = sheetName.trim().toUpperCase()
+    const match = RECOMMENDATION_SHEET_ALIASES.find(([alias]) => upper === alias)
+    if (match && !found.includes(match[1])) found.push(match[1])
+  }
+  return found
+}
+
+// Returns the worksheet and its depth range, or null if not found.
+function findDepthSheet(
+  wb: XLSX.WorkBook,
+  depthFrom: number,
+  depthTo: number,
+): XLSX.WorkSheet | null {
+  const aliases = DEPTH_SHEET_ALIASES.find(([, df, dt]) => df === depthFrom && dt === depthTo)
+  if (!aliases) return null
+  const [names] = aliases
+  for (const sheetName of wb.SheetNames) {
+    const upper = sheetName.trim().toUpperCase()
+    if (names.some((alias) => upper === alias || upper.startsWith(alias))) {
+      return wb.Sheets[sheetName]
+    }
+  }
+  return null
+}
+
+// Normalizes a raw header cell value to an official attribute code or 'PONTO'.
+function normalizeColumnName(raw: unknown): string {
+  if (raw === null || raw === undefined) return ''
+  const s = String(raw).trim().toUpperCase()
+  if (s === 'PONTO') return 'PONTO'
+  if (EXPECTED_COLUMNS.includes(s)) return s
+  return COLUMN_ALIASES[s] ?? s
+}
+
+// Detects the header row index and the first data row index.
+// The NUTRISIM format has a culture-name row before the header row,
+// and a units row immediately after. Returns -1 if PONTO not found.
+function detectHeaderRow(rows: unknown[][]): { headerIdx: number; dataStartIdx: number } {
+  for (let i = 0; i < Math.min(rows.length, 6); i++) {
+    const hasPonto = rows[i].some(
+      (cell) => typeof cell === 'string' && cell.trim().toUpperCase() === 'PONTO',
+    )
+    if (hasPonto) {
+      // Check if the next row is a units row (contains '/' or known unit strings, no numeric values)
+      const nextRow = rows[i + 1] ?? []
+      const looksLikeUnits =
+        nextRow.length > 0 &&
+        nextRow.every((cell) => {
+          if (cell === null || cell === undefined || cell === '') return true
+          if (typeof cell === 'number') return false
+          const s = String(cell)
+          return (
+            s.includes('/') ||
+            /^(mg|cmol|g|%|-|dm|kg|ppm)/.test(s.toLowerCase()) ||
+            /^\W*$/.test(s)
+          )
+        })
+      return { headerIdx: i, dataStartIdx: looksLikeUnits ? i + 2 : i + 1 }
+    }
+  }
+  return { headerIdx: -1, dataStartIdx: 0 }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -41,6 +197,17 @@ Deno.serve(async (req: Request) => {
   try {
     const authorization = req.headers.get('Authorization')
     if (!authorization) throw new Error('Autenticação obrigatória.')
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authorization } },
+    })
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAuth.auth.getUser()
+    if (userError || !user) throw new Error('Sessão inválida.')
 
     const body = await req.json()
 
@@ -109,11 +276,7 @@ Deno.serve(async (req: Request) => {
       const { storagePath, campaignId, organizationId } = body
       if (!storagePath || !campaignId || !organizationId) throw new Error('Parâmetros inválidos')
 
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
-      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authorization } },
-      })
+      const supabase = supabaseAuth
 
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('soil-imports')
@@ -135,11 +298,15 @@ Deno.serve(async (req: Request) => {
         dense: true,
       })
 
-      const ws0_20 = wb.Sheets['SOLO_0_20']
-      const ws20_40 = wb.Sheets['SOLO_20_40']
+      const ws0_20 = findDepthSheet(wb, 0, 20)
+      const ws20_40 = findDepthSheet(wb, 20, 40)
 
       if (!ws0_20 && !ws20_40) {
-        throw new Error('As abas SOLO_0_20 e SOLO_20_40 não foram encontradas.')
+        const found = wb.SheetNames.join(', ')
+        throw new Error(
+          `Nenhuma aba de análise encontrada. Abas no arquivo: [${found}]. ` +
+            `Use os nomes SOLO_0_20 / SOLO_20_40 (template oficial) ou 0 a 20 / 20 a 40 (formato NUTRISIM).`,
+        )
       }
 
       const { data: points, error: pointsError } = await supabase
@@ -150,22 +317,47 @@ Deno.serve(async (req: Request) => {
 
       if (pointsError) throw new Error('Erro ao buscar pontos da campanha')
 
-      const pointMap = new Map()
-      points.forEach((p: any) => pointMap.set(String(p.code).trim().toUpperCase(), p.id))
+      const pointMap = new Map<string, string>()
+      ;(points ?? []).forEach((p: { id: string; code: string }) =>
+        pointMap.set(String(p.code).trim().toUpperCase(), p.id),
+      )
 
-      const parseSheet = (ws: any, depthFrom: number, depthTo: number) => {
-        if (!ws) return []
-        const rawData = XLSX.utils.sheet_to_json(ws, { defval: null }) as any[]
-        const results = []
+      type ParsedItem = {
+        point_id: string | undefined
+        code: string
+        depth_from_cm: number
+        depth_to_cm: number
+        measurements: { attribute_code: string; numeric_value: number; text_value: null }[]
+        errors: string[]
+      }
 
-        for (const row of rawData) {
-          const pontoRaw = row['PONTO'] ?? row['ponto']
-          if (pontoRaw === null || pontoRaw === '') continue
+      const parseSheet = (ws: XLSX.WorkSheet, depthFrom: number, depthTo: number): ParsedItem[] => {
+        // Read all rows as raw arrays to handle multi-row headers (NUTRISIM format)
+        const allRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null }) as unknown[][]
+        const { headerIdx, dataStartIdx } = detectHeaderRow(allRows)
+
+        if (headerIdx === -1) return [] // no PONTO column found — skip sheet
+
+        // Build normalized header array
+        const headers = allRows[headerIdx].map(normalizeColumnName)
+        const pontoColIdx = headers.indexOf('PONTO')
+        if (pontoColIdx === -1) return []
+
+        const knownCols = new Set(EXPECTED_COLUMNS)
+        const unknownColsForSheet = new Set<string>()
+        const results: ParsedItem[] = []
+
+        for (let rowIdx = dataStartIdx; rowIdx < allRows.length; rowIdx++) {
+          const row = allRows[rowIdx]
+          if (!row || row.every((c) => c === null || c === undefined || c === '')) continue
+
+          const pontoRaw = row[pontoColIdx]
+          if (pontoRaw === null || pontoRaw === undefined || pontoRaw === '') continue
 
           const pontoStr = String(pontoRaw).trim().toUpperCase()
           const pointId = pointMap.get(pontoStr)
 
-          const item: any = {
+          const item: ParsedItem = {
             point_id: pointId,
             code: pontoStr,
             depth_from_cm: depthFrom,
@@ -178,26 +370,20 @@ Deno.serve(async (req: Request) => {
             item.errors.push(`Ponto ${pontoStr} não encontrado na campanha`)
           }
 
-          const knownCols = new Set(EXPECTED_COLUMNS)
+          headers.forEach((attrCode, colIdx) => {
+            if (colIdx === pontoColIdx || !attrCode) return
+            if (!knownCols.has(attrCode)) {
+              unknownColsForSheet.add(attrCode)
+              return
+            }
+            const val = row[colIdx]
+            if (val === null || val === undefined || val === '') return
 
-          Object.keys(row).forEach((key) => {
-            const upperKey = key.toUpperCase()
-            if (upperKey === 'PONTO') return
-
-            if (knownCols.has(upperKey)) {
-              const val = row[key]
-              if (val !== null && val !== '') {
-                const numVal = Number(val)
-                if (isNaN(numVal)) {
-                  item.errors.push(`Valor não numérico para ${key}`)
-                } else {
-                  item.measurements.push({
-                    attribute_code: upperKey,
-                    numeric_value: numVal,
-                    text_value: null,
-                  })
-                }
-              }
+            const numVal = Number(val)
+            if (isNaN(numVal)) {
+              item.errors.push(`Valor não numérico para ${attrCode}: "${val}"`)
+            } else {
+              item.measurements.push({ attribute_code: attrCode, numeric_value: numVal, text_value: null })
             }
           })
 
@@ -206,29 +392,28 @@ Deno.serve(async (req: Request) => {
         return results
       }
 
-      const data0_20 = parseSheet(ws0_20, 0, 20)
-      const data20_40 = parseSheet(ws20_40, 20, 40)
+      const data0_20 = ws0_20 ? parseSheet(ws0_20, 0, 20) : []
+      const data20_40 = ws20_40 ? parseSheet(ws20_40, 20, 40) : []
 
       const allData = [...data0_20, ...data20_40]
 
+      // Collect unknown columns across both sheets for the validation summary
       const unknownCols = new Set<string>()
       const knownCols = new Set(EXPECTED_COLUMNS)
-      const extractHeaders = (ws: any) => {
-        if (!ws) return []
-        const header = XLSX.utils.sheet_to_json(ws, { header: 1 })[0] as string[]
-        return header || []
+      const collectUnknown = (ws: XLSX.WorkSheet | null) => {
+        if (!ws) return
+        const allRows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null }) as unknown[][]
+        const { headerIdx } = detectHeaderRow(allRows)
+        if (headerIdx === -1) return
+        allRows[headerIdx].forEach((cell) => {
+          const norm = normalizeColumnName(cell)
+          if (norm && norm !== 'PONTO' && !knownCols.has(norm)) unknownCols.add(String(cell))
+        })
       }
-      const h1 = extractHeaders(ws0_20)
-      const h2 = extractHeaders(ws20_40)
+      collectUnknown(ws0_20)
+      collectUnknown(ws20_40)
 
-      ;[...h1, ...h2].forEach((h: string) => {
-        if (h && typeof h === 'string') {
-          const uH = h.toUpperCase()
-          if (!knownCols.has(uH) && uH !== 'PONTO') {
-            unknownCols.add(h)
-          }
-        }
-      })
+      const detectedRecommendationSheets = detectRecommendationSheets(wb)
 
       const validationSummary = {
         totalRows: allData.length,
@@ -238,6 +423,9 @@ Deno.serve(async (req: Request) => {
           .length,
         errors: allData.flatMap((d) => d.errors),
         unknownColumns: Array.from(unknownCols),
+        // Recommendation sheets present in this workbook but not imported by this flow.
+        // Surfaces RELCORE / RELNUTRI / Rel Org to the UI so it can inform the user.
+        detectedRecommendationSheets,
       }
 
       return new Response(JSON.stringify({ success: true, data: allData, validationSummary }), {

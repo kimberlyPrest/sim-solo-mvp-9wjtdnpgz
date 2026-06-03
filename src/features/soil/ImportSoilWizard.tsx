@@ -42,6 +42,7 @@ type PreviewData = {
     unmatchedPoints: number
     errors: string[]
     unknownColumns: string[]
+    detectedRecommendationSheets: string[]
   }
 }
 
@@ -298,6 +299,19 @@ export function ImportSoilWizard({
                   </span>
                   {previewData.validationSummary.unknownColumns.join(', ')}
                 </div>
+              </div>
+            )}
+
+            {(previewData.validationSummary.detectedRecommendationSheets ?? []).length > 0 && (
+              <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
+                <span className="font-semibold block mb-1">Abas detectadas (não importadas agora):</span>
+                <p>
+                  Seu arquivo contém{' '}
+                  <strong>
+                    {previewData.validationSummary.detectedRecommendationSheets.join(', ')}
+                  </strong>
+                  . Essas abas de recomendação serão importáveis na aba Recomendações da área.
+                </p>
               </div>
             )}
 

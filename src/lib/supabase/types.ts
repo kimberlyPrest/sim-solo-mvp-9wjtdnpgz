@@ -976,6 +976,16 @@ export type Database = {
       }
       get_area_map_data: { Args: { p_area_id: string }; Returns: Json }
       get_campaign_points: { Args: { p_campaign_id: string }; Returns: Json }
+      get_campaign_points_with_attribute: {
+        Args: {
+          p_campaign_id: string
+          p_attribute_code: string
+          p_depth_from: number
+          p_depth_to: number
+        }
+        Returns: Json
+      }
+      get_farm_map_data: { Args: { p_farm_id: string }; Returns: Json }
       get_user_organizations: { Args: never; Returns: string[] }
       has_role_in_org: {
         Args: {

@@ -52,7 +52,10 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
       if (!selectedAttribute || !selectedDepth || !areaId) return
       setLoading(true)
       const depthConfig = depths.find((d) => `${d.from}-${d.to}` === selectedDepth)
-      if (!depthConfig) return
+      if (!depthConfig) {
+        setLoading(false)
+        return
+      }
 
       try {
         const { data: rawData, error } = await supabase

@@ -40,10 +40,17 @@ const setSchema = z.object({
   title: z.string().optional(),
 })
 
-export function AreaRecommendationsTab({ areaId }: { areaId: string }) {
+export function AreaRecommendationsTab({
+  areaId,
+  canEdit,
+}: {
+  areaId: string
+  canEdit: boolean
+}) {
   const [sets, setSets] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
+  const [hasError, setHasError] = useState(false)
+  const { user, organization } = useAuth()
   const { toast } = useToast()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
@@ -65,16 +72,17 @@ export function AreaRecommendationsTab({ areaId }: { areaId: string }) {
   }, [areaId])
 
   async function loadCampaigns() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('sampling_campaigns')
       .select('id, name, area_seasons!inner(area_id)')
       .eq('area_seasons.area_id', areaId)
-    setCampaigns(data || [])
+    if (!error) setCampaigns(data || [])
   }
 
   async function loadSets() {
     setLoading(true)
-    const { data } = await supabase
+    setHasError(false)
+    const { data, error } = await supabase
       .from('recommendation_sets')
       .select(`
         *,
@@ -84,17 +92,17 @@ export function AreaRecommendationsTab({ areaId }: { areaId: string }) {
       .eq('sampling_campaigns.area_seasons.area_id', areaId)
       .order('created_at', { ascending: false })
 
+    if (error) {
+      setHasError(true)
+      toast({ title: 'Erro', description: 'Não foi possível carregar as recomendações.', variant: 'destructive' })
+    }
     setSets(data || [])
     setLoading(false)
   }
 
   async function onSubmit(values: z.infer<typeof setSchema>) {
     try {
-      const { data: orgs } = await supabase
-        .from('organization_members')
-        .select('organization_id')
-        .limit(1)
-      const orgId = orgs?.[0]?.organization_id
+      const orgId = organization?.id
       if (!orgId) throw new Error('Organização não encontrada')
 
       const { error } = await supabase.from('recommendation_sets').insert({
@@ -118,10 +126,19 @@ export function AreaRecommendationsTab({ areaId }: { areaId: string }) {
 
   if (loading) return <div className="animate-pulse h-32 bg-muted/20 rounded-xl"></div>
 
+  if (hasError) {
+    return (
+      <div className="p-8 text-center text-destructive">
+        Erro ao carregar recomendações. Tente recarregar a página.
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2 className="text-lg font-semibold">Conjuntos de Recomendação</h2>
+        {canEdit && (
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -203,6 +220,7 @@ export function AreaRecommendationsTab({ areaId }: { areaId: string }) {
             </Form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid gap-4">
@@ -222,9 +240,11 @@ export function AreaRecommendationsTab({ areaId }: { areaId: string }) {
                       <span className="capitalize">{set.kind}</span>
                     </CardDescription>
                   </div>
-                  <Button variant="ghost" size="sm">
-                    <Edit className="w-4 h-4 mr-2" /> Editar Itens
-                  </Button>
+                  {canEdit && (
+                    <Button variant="ghost" size="sm">
+                      <Edit className="w-4 h-4 mr-2" /> Editar Itens
+                    </Button>
+                  )}
                 </div>
               </CardHeader>
             </Card>
