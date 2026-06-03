@@ -56,7 +56,7 @@ export function GeographicImportWizard({
   onSuccess: () => void
   onCampaignCreated?: (newId: string) => void
 }) {
-  const { organization } = useAuth() as any
+  const { organization } = useAuth()
   const [orgId, setOrgId] = useState<string | null>(organization?.id || null)
   const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
 
