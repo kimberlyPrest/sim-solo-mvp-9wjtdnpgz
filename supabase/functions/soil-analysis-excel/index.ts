@@ -42,6 +42,17 @@ Deno.serve(async (req: Request) => {
     const authorization = req.headers.get('Authorization')
     if (!authorization) throw new Error('Autenticação obrigatória.')
 
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
+    const supabaseAuth = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authorization } },
+    })
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAuth.auth.getUser()
+    if (userError || !user) throw new Error('Sessão inválida.')
+
     const body = await req.json()
 
     if (body.action === 'generate_template') {
@@ -109,11 +120,7 @@ Deno.serve(async (req: Request) => {
       const { storagePath, campaignId, organizationId } = body
       if (!storagePath || !campaignId || !organizationId) throw new Error('Parâmetros inválidos')
 
-      const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY') || ''
-      const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-        global: { headers: { Authorization: authorization } },
-      })
+      const supabase = supabaseAuth
 
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('soil-imports')
