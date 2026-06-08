@@ -152,10 +152,14 @@
   }
 }
 
-/* Leaflet dark overrides */
+/* Leaflet dark agro-tech overrides */
 .leaflet-container {
-  background: #0a150a;
+  background: #071207;
   font-family: 'Inter', sans-serif;
+}
+.leaflet-roadmap-green-tile {
+  filter: invert(1) hue-rotate(78deg) saturate(1.55) brightness(0.62) contrast(1.12);
+  opacity: 0.92;
 }
 .leaflet-popup-content-wrapper {
   background: hsl(120 22% 9%);

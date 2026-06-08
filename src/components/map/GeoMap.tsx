@@ -36,15 +36,26 @@ const CATEGORY_LABELS: Record<SoilCategory, string> = {
 }
 
 const TILE_URLS = {
+  roadmap: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
   dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
   satellite:
     'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-}
+} as const
 
 const TILE_ATTRS = {
+  roadmap:
+    '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   dark: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
   satellite: 'Tiles &copy; Esri',
+} as const
+
+const TILE_CLASSES: Record<keyof typeof TILE_URLS, string | undefined> = {
+  roadmap: 'leaflet-roadmap-green-tile',
+  dark: undefined,
+  satellite: undefined,
 }
+
+type TileStyle = keyof typeof TILE_URLS
 
 function makePointIcon(category?: SoilCategory, size = 14) {
   const colors = category
@@ -150,7 +161,7 @@ export function GeoMap({
   features,
   points,
   height = '400px',
-  tileStyle = 'dark',
+  tileStyle = 'roadmap',
   showLegend = true,
   onFeatureClick,
   selectedFeatureId,
@@ -159,7 +170,7 @@ export function GeoMap({
   features?: MapFeature[]
   points?: SoilPointData[]
   height?: string
-  tileStyle?: 'dark' | 'satellite'
+  tileStyle?: TileStyle
   showLegend?: boolean
   onFeatureClick?: (id: string) => void
   selectedFeatureId?: string
@@ -196,6 +207,7 @@ export function GeoMap({
           key={tileStyle}
           attribution={TILE_ATTRS[tileStyle]}
           url={TILE_URLS[tileStyle]}
+          className={TILE_CLASSES[tileStyle]}
           maxZoom={19}
         />
 

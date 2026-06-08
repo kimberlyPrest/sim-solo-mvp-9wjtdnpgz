@@ -354,7 +354,7 @@ export default function AreaDetailsPage() {
           <GeoMap
             boundary={boundary}
             points={coloredPoints.length > 0 ? coloredPoints : undefined}
-            tileStyle="dark"
+            tileStyle="roadmap"
             height="100%"
             showLegend
           />

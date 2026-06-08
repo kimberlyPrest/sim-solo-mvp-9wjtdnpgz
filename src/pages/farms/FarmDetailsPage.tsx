@@ -501,7 +501,7 @@ export default function FarmDetailsPage() {
         ) : (
           <GeoMap
             features={mapFeatures}
-            tileStyle="dark"
+            tileStyle="roadmap"
             height="420px"
             showLegend={false}
             onFeatureClick={(areaId) => {
