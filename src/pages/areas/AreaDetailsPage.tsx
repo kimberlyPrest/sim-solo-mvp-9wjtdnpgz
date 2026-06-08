@@ -291,10 +291,12 @@ export default function AreaDetailsPage() {
         </div>
         {canEdit && (
           <div className="flex gap-2 shrink-0">
-            <Button size="sm" variant="outline" onClick={() => setGeoWizardOpen(true)}>
-              <MapPin className="h-3.5 w-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Geo</span>
-            </Button>
+            {!boundary && (
+              <Button size="sm" variant="outline" onClick={() => setGeoWizardOpen(true)}>
+                <MapPin className="h-3.5 w-3.5 mr-1.5" />
+                <span className="hidden sm:inline">Geo</span>
+              </Button>
+            )}
             <Button size="sm" variant="outline" onClick={() => setSoilWizardOpen(true)}>
               <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
               <span className="hidden sm:inline">Solo</span>
@@ -363,9 +365,7 @@ export default function AreaDetailsPage() {
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground">Safra</label>
               {seasons.length === 0 ? (
-                <p className="text-xs text-muted-foreground/60 py-1">
-                  Nenhuma safra — importe um shapefile primeiro.
-                </p>
+                <p className="text-xs text-muted-foreground/60 py-1">Nenhuma safra cadastrada.</p>
               ) : (
                 <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
                   <SelectTrigger className="h-8 text-xs font-mono">

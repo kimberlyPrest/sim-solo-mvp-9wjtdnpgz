@@ -38,12 +38,17 @@ Deno.serve(async (req: Request) => {
       throw new Error('Autenticação obrigatória.')
     }
 
-    const { storagePath, action, declaredAreaHa, projection = 'EPSG:4326' } = await req.json()
+    const {
+      storagePath,
+      action = 'initial',
+      declaredAreaHa,
+      projection = 'EPSG:4326',
+    } = await req.json()
     if (typeof storagePath !== 'string' || !storagePath.trim()) {
       throw new Error('Caminho do arquivo obrigatório.')
     }
-    if (!['initial', 'new_points', 'update_boundary'].includes(action)) {
-      throw new Error('Ação geográfica inválida.')
+    if (action !== 'initial') {
+      throw new Error('A importação geográfica permite apenas a configuração inicial.')
     }
 
     const organizationId = storagePath.split('/')[0]
@@ -90,14 +95,8 @@ Deno.serve(async (req: Request) => {
     if (polygonFeatures.length > 1) {
       throw new Error('O ZIP deve conter exatamente um polígono ou multipolígono para o contorno.')
     }
-    if (action === 'initial' && (polygonFeatures.length === 0 || pointFeatures.length === 0)) {
-      throw new Error('O cadastro inicial exige um contorno e ao menos um ponto.')
-    }
-    if (action === 'new_points' && pointFeatures.length === 0) {
-      throw new Error('O arquivo deve conter ao menos um ponto.')
-    }
-    if (action === 'update_boundary' && polygonFeatures.length === 0) {
-      throw new Error('A atualização exige um polígono ou multipolígono.')
+    if (polygonFeatures.length === 0 || pointFeatures.length === 0) {
+      throw new Error('A configuração inicial exige um contorno e ao menos um ponto.')
     }
 
     let boundary: any = null

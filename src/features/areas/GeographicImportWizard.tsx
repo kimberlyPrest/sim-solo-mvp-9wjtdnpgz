@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
   Select,
   SelectContent,
@@ -18,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/use-auth'
 import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -80,9 +78,7 @@ export function GeographicImportWizard({
 
   const [step, setStep] = useState<1 | 2>(1)
   const [isProcessing, setIsProcessing] = useState(false)
-  const [action, setAction] = useState<'initial' | 'add_points' | 'update_boundary'>('initial')
   const [projection, setProjection] = useState<string>('EPSG:4326')
-  const [justification, setJustification] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [filePath, setFilePath] = useState<string>('')
@@ -105,9 +101,7 @@ export function GeographicImportWizard({
 
   const resetState = () => {
     setStep(1)
-    setAction('initial')
     setProjection('EPSG:4326')
-    setJustification('')
     setFile(null)
     setPreviewData(null)
     setFilePath('')
@@ -123,13 +117,6 @@ export function GeographicImportWizard({
       return toast({
         title: 'Erro',
         description: 'Selecione um arquivo ZIP.',
-        variant: 'destructive',
-      })
-    }
-    if (action === 'update_boundary' && !justification) {
-      return toast({
-        title: 'Erro',
-        description: 'Justificativa obrigatória.',
         variant: 'destructive',
       })
     }
@@ -149,7 +136,7 @@ export function GeographicImportWizard({
       const actualPath = uploadData?.path || newFilePath
 
       const { data, error: fnError } = await supabase.functions.invoke('parse-shapefile', {
-        body: { storagePath: actualPath, action, projection },
+        body: { storagePath: actualPath, action: 'initial', projection },
       })
 
       if (fnError || !data?.success) {
@@ -169,16 +156,22 @@ export function GeographicImportWizard({
   const handleConfirm = async () => {
     setIsProcessing(true)
     try {
+      const { data: mapData, error: mapError } = await supabase.rpc('get_area_map_data', {
+        p_area_id: area.id,
+      })
+      if (mapError) throw mapError
+      if ((mapData as any)?.boundary) {
+        throw new Error('A configuração geográfica inicial já foi realizada para esta área.')
+      }
+
       const { error } = await supabase.rpc('commit_geographic_import', {
         p_import_id: crypto.randomUUID(),
         p_area_id: area.id,
-        p_campaign_id: null,
-        p_action: action,
+        p_action: 'initial',
         p_boundary_geojson: previewData!.boundary,
         p_points: previewData!.points,
         p_calculated_area_ha: previewData!.calculatedAreaHa,
         p_source_srid: projection === 'EPSG:4326' ? 4326 : 32723,
-        p_justification: justification,
         p_org_id: orgId as string,
         p_file_path: filePath,
         p_original_name: file?.name,
@@ -187,9 +180,8 @@ export function GeographicImportWizard({
 
       if (error) throw error
 
-      // Best-effort: update farm city/state from boundary centroid
       const farmId = area.farm_id
-      if (farmId && (action === 'initial' || action === 'update_boundary')) {
+      if (farmId) {
         reverseGeocode(previewData!.boundary).then((geo) => {
           if (geo?.city || geo?.state) {
             supabase
@@ -204,7 +196,7 @@ export function GeographicImportWizard({
         })
       }
 
-      toast({ title: 'Sucesso', description: 'Importação concluída com sucesso.' })
+      toast({ title: 'Sucesso', description: 'Configuração geográfica concluída.' })
       onSuccess()
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
@@ -217,45 +209,16 @@ export function GeographicImportWizard({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Importar Dados Geográficos</DialogTitle>
+          <DialogTitle>Configuração Geográfica da Área</DialogTitle>
           <DialogDescription>
             {step === 1
-              ? 'Configure e faça o upload do Shapefile (ZIP).'
+              ? 'Envie o Shapefile (ZIP) com o contorno e os pontos da área.'
               : 'Revise os dados antes de confirmar.'}
           </DialogDescription>
         </DialogHeader>
 
         {step === 1 && (
           <div className="space-y-6 py-4 animate-fade-in">
-            <div className="space-y-3">
-              <Label>Ação</Label>
-              <RadioGroup
-                value={action}
-                onValueChange={(v) => setAction(v as typeof action)}
-                className="grid grid-cols-1 sm:grid-cols-3 gap-3"
-              >
-                {(
-                  [
-                    { value: 'initial', label: 'Configuração Inicial' },
-                    { value: 'add_points', label: 'Adicionar Pontos' },
-                    { value: 'update_boundary', label: 'Atualizar Contorno' },
-                  ] as const
-                ).map(({ value, label }) => (
-                  <div
-                    key={value}
-                    className={`flex items-center space-x-2 border p-3 rounded-md transition-colors ${
-                      action === value ? 'border-primary bg-primary/5' : ''
-                    }`}
-                  >
-                    <RadioGroupItem value={value} id={value} />
-                    <Label htmlFor={value} className="cursor-pointer font-medium w-full">
-                      {label}
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Projeção</Label>
@@ -264,8 +227,8 @@ export function GeographicImportWizard({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="EPSG:4326">WGS84 (Graus Decimais) — EPSG:4326</SelectItem>
-                    <SelectItem value="EPSG:32723">UTM Zona 23S (Metros) — EPSG:32723</SelectItem>
+                    <SelectItem value="EPSG:4326">WGS84 (Graus Decimais) - EPSG:4326</SelectItem>
+                    <SelectItem value="EPSG:32723">UTM Zona 23S (Metros) - EPSG:32723</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -278,20 +241,10 @@ export function GeographicImportWizard({
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
                 <p className="text-xs text-muted-foreground">
-                  O ZIP deve conter .shp, .shx e .dbf correspondentes.
+                  O ZIP deve conter o contorno e os pontos da área, com .shp, .shx e .dbf
+                  correspondentes.
                 </p>
               </div>
-
-              {action === 'update_boundary' && (
-                <div className="space-y-2">
-                  <Label>Justificativa para Alteração</Label>
-                  <Textarea
-                    value={justification}
-                    onChange={(e) => setJustification(e.target.value)}
-                    placeholder="Motivo para alterar o contorno da área..."
-                  />
-                </div>
-              )}
             </div>
 
             <DialogFooter>
@@ -368,7 +321,7 @@ export function GeographicImportWizard({
               </Button>
               <Button onClick={handleConfirm} disabled={isProcessing}>
                 {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Confirmar Importação
+                Confirmar Configuração
               </Button>
             </DialogFooter>
           </div>
