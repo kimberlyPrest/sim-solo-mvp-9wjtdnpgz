@@ -453,7 +453,7 @@ export function AreaComparisonTab({ areaId }: { areaId: string }) {
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
         <div className="relative min-h-[360px] overflow-hidden rounded-xl border border-border/60">
           <GeoMap boundary={boundary} points={mapPoints} height="420px" showLegend={false} />
-          <div className="pointer-events-none absolute left-3 top-3 z-[1000] flex flex-wrap gap-2">
+          <div className="pointer-events-none absolute left-3 top-3 z-30 flex flex-wrap gap-2">
             <Badge className="bg-blue-500 text-white hover:bg-blue-500">Subiu</Badge>
             <Badge className="bg-destructive text-destructive-foreground hover:bg-destructive">
               Caiu
@@ -461,7 +461,7 @@ export function AreaComparisonTab({ areaId }: { areaId: string }) {
             <Badge className="bg-green-600 text-white hover:bg-green-600">Estável</Badge>
           </div>
           {comparisonLoading && (
-            <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-background/40 backdrop-blur-sm">
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background/40 backdrop-blur-sm">
               <span className="rounded-md border border-border/60 bg-background px-3 py-1 text-xs text-muted-foreground">
                 Atualizando comparação...
               </span>

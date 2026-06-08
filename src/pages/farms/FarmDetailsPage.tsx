@@ -513,7 +513,7 @@ export default function FarmDetailsPage() {
         )}
 
         {!mapLoading && (
-          <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-2 pointer-events-none">
+          <div className="absolute top-3 left-3 z-30 flex flex-col gap-2 pointer-events-none">
             <div className="flex flex-wrap gap-2">
               <div className="bg-background/80 backdrop-blur border border-border/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
@@ -554,7 +554,7 @@ export default function FarmDetailsPage() {
         )}
 
         {mapFeatures.length > 0 && (
-          <div className="absolute bottom-3 right-3 z-[1000] pointer-events-none">
+          <div className="absolute bottom-3 right-3 z-30 pointer-events-none">
             <div className="bg-background/70 backdrop-blur border border-border/50 rounded px-2 py-1">
               <span className="text-[10px] font-mono text-muted-foreground">
                 Clique em um talhão para detalhes

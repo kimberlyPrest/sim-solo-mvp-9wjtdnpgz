@@ -110,7 +110,7 @@ function Legend({ categories }: { categories: SoilCategory[] }) {
         position: 'absolute',
         bottom: 24,
         left: 12,
-        zIndex: 1000,
+        zIndex: 30,
         background: 'rgba(7,15,6,0.85)',
         border: '1px solid rgba(165,230,58,0.2)',
         borderRadius: 8,

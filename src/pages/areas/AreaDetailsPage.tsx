@@ -359,7 +359,7 @@ export default function AreaDetailsPage() {
             showLegend
           />
 
-          <div className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-1.5 pointer-events-none">
+          <div className="absolute top-3 right-3 z-30 flex flex-col items-end gap-1.5 pointer-events-none">
             {selectedSeasonLabel && (
               <div className="bg-background/80 backdrop-blur border border-border/50 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
                 <Activity className="h-3 w-3 text-primary" />
@@ -382,7 +382,7 @@ export default function AreaDetailsPage() {
           </div>
 
           {!boundary && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 gap-3 z-[500]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 gap-3 z-30">
               <MapPin className="h-10 w-10 opacity-20" />
               <p className="text-sm text-muted-foreground">Sem dados geográficos.</p>
               {canEdit && (
