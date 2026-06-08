@@ -76,14 +76,18 @@ function MapBounds({
       if (f.boundary) {
         try {
           bounds.extend(L.geoJSON(f.boundary).getBounds())
-        } catch {}
+        } catch (_e) {
+          /* ignore invalid geometry */
+        }
       }
     })
 
     if (boundary) {
       try {
         bounds.extend(L.geoJSON(boundary).getBounds())
-      } catch {}
+      } catch (_e) {
+        /* ignore invalid geometry */
+      }
     }
 
     points?.forEach((p) => {
