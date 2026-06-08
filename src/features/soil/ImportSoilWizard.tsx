@@ -86,37 +86,6 @@ export function ImportSoilWizard({
 
   const seasonLabel = (s: Season) => (s.crop ? `${s.season_year} (${s.crop})` : s.season_year)
 
-  const findOrCreateCampaign = async (seasonId: string): Promise<string> => {
-    const { data: existing } = await supabase
-      .from('sampling_campaigns')
-      .select('id')
-      .eq('area_season_id', seasonId)
-      .limit(1)
-      .maybeSingle()
-
-    if (existing) return existing.id
-
-    const { data: season } = await supabase
-      .from('area_seasons')
-      .select('season_year')
-      .eq('id', seasonId)
-      .single()
-
-    const { data: created, error } = await supabase
-      .from('sampling_campaigns')
-      .insert({
-        organization_id: organization?.id,
-        area_season_id: seasonId,
-        name: `Amostragem ${season?.season_year || ''}`.trim(),
-        source: 'sim',
-      })
-      .select('id')
-      .single()
-
-    if (error) throw new Error(`Erro ao criar campanha: ${error.message}`)
-    return created.id
-  }
-
   const downloadTemplate = async () => {
     setIsDownloadingTemplate(true)
     try {
@@ -151,8 +120,6 @@ export function ImportSoilWizard({
       return toast({ title: 'Atenção', description: 'Selecione um arquivo .xlsx ou .xlsm' })
     setIsUploading(true)
     try {
-      const campaignId = await findOrCreateCampaign(data.season_id)
-
       const ext = file.name.split('.').pop()
       const storagePath = `${organization?.id}/${crypto.randomUUID()}.${ext}`
 
@@ -172,7 +139,7 @@ export function ImportSoilWizard({
           body: JSON.stringify({
             action: 'parse',
             storagePath,
-            campaignId,
+            areaId,
             organizationId: organization?.id,
           }),
         },
@@ -182,7 +149,13 @@ export function ImportSoilWizard({
       if (!result.success) throw new Error(result.error)
 
       setPreviewData(result)
-      setPayload({ ...data, campaignId, storagePath, originalName: file.name, fileSize: file.size })
+      setPayload({
+        ...data,
+        areaSeasonId: data.season_id,
+        storagePath,
+        originalName: file.name,
+        fileSize: file.size,
+      })
       setStep(2)
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
@@ -194,10 +167,10 @@ export function ImportSoilWizard({
   const handleConfirm = async () => {
     setIsUploading(true)
     try {
-      const { error } = await supabase.rpc('commit_soil_analysis_import', {
+      const { error } = await (supabase.rpc as any)('commit_soil_analysis_import', {
         p_import_id: crypto.randomUUID(),
         p_org_id: organization?.id,
-        p_campaign_id: payload!.campaignId,
+        p_area_season_id: payload!.areaSeasonId,
         p_file_path: payload!.storagePath,
         p_original_name: payload!.originalName,
         p_file_size: payload!.fileSize,

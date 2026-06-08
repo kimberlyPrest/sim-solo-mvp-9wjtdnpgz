@@ -218,7 +218,7 @@ Deno.serve(async (req: Request) => {
 
       const wsReadme = XLSX.utils.aoa_to_sheet([
         ['INSTRUÇÕES DE PREENCHIMENTO'],
-        ['1. Preencha a coluna PONTO com o identificador exato do ponto da campanha.'],
+        ['1. Preencha a coluna PONTO com o identificador exato do ponto da área.'],
         ['2. Preencha os valores laboratoriais com números.'],
         ['3. Não altere o nome das abas SOLO_0_20 e SOLO_20_40.'],
         [],
@@ -271,8 +271,8 @@ Deno.serve(async (req: Request) => {
     }
 
     if (body.action === 'parse') {
-      const { storagePath, campaignId, organizationId } = body
-      if (!storagePath || !campaignId || !organizationId) throw new Error('Parâmetros inválidos')
+      const { storagePath, areaId, organizationId } = body
+      if (!storagePath || !areaId || !organizationId) throw new Error('Parâmetros inválidos')
 
       const supabase = supabaseAuth
 
@@ -310,10 +310,10 @@ Deno.serve(async (req: Request) => {
       const { data: points, error: pointsError } = await supabase
         .from('sampling_points')
         .select('id, code')
-        .eq('campaign_id', campaignId)
+        .eq('area_id', areaId)
         .eq('organization_id', organizationId)
 
-      if (pointsError) throw new Error('Erro ao buscar pontos da campanha')
+      if (pointsError) throw new Error('Erro ao buscar pontos da área')
 
       const pointMap = new Map<string, string>()
       ;(points ?? []).forEach((p: { id: string; code: string }) =>
@@ -365,7 +365,7 @@ Deno.serve(async (req: Request) => {
           }
 
           if (!pointId) {
-            item.errors.push(`Ponto ${pontoStr} não encontrado na campanha`)
+            item.errors.push(`Ponto ${pontoStr} não encontrado na área`)
           }
 
           headers.forEach((attrCode, colIdx) => {
