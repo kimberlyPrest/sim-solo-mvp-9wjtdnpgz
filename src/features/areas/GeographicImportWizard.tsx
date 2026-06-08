@@ -40,8 +40,6 @@ type PreviewData = {
   }
 }
 
-type Season = { id: string; season_year: string; crop: string | null }
-
 async function reverseGeocode(boundary: any): Promise<{ city?: string; state?: string } | null> {
   try {
     const geom = boundary?.geometry || boundary
@@ -80,9 +78,6 @@ export function GeographicImportWizard({
   const { toast } = useToast()
   const [orgId, setOrgId] = useState<string | null>(organization?.id || null)
 
-  const [seasons, setSeasons] = useState<Season[]>([])
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('')
-
   const [step, setStep] = useState<1 | 2>(1)
   const [isProcessing, setIsProcessing] = useState(false)
   const [action, setAction] = useState<'initial' | 'add_points' | 'update_boundary'>('initial')
@@ -90,7 +85,6 @@ export function GeographicImportWizard({
   const [justification, setJustification] = useState<string>('')
   const [file, setFile] = useState<File | null>(null)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
-  const [resolvedCampaignId, setResolvedCampaignId] = useState<string>('')
   const [filePath, setFilePath] = useState<string>('')
 
   useEffect(() => {
@@ -107,66 +101,21 @@ export function GeographicImportWizard({
           if (data) setOrgId(data.organization_id)
         })
     }
-
-    supabase
-      .from('area_seasons')
-      .select('id, season_year, crop')
-      .eq('area_id', area.id)
-      .order('season_year', { ascending: false })
-      .then(({ data }) => {
-        if (data) {
-          setSeasons(data)
-          if (data.length > 0) setSelectedSeasonId(data[0].id)
-        }
-      })
   }, [open, area.id, organization?.id])
 
   const resetState = () => {
     setStep(1)
     setAction('initial')
-    setSelectedSeasonId(seasons[0]?.id || '')
     setProjection('EPSG:4326')
     setJustification('')
     setFile(null)
     setPreviewData(null)
-    setResolvedCampaignId('')
     setFilePath('')
   }
 
   const handleOpenChange = (o: boolean) => {
     if (!o) resetState()
     onOpenChange(o)
-  }
-
-  const findOrCreateCampaign = async (seasonId: string): Promise<string> => {
-    const { data: existing } = await supabase
-      .from('sampling_campaigns')
-      .select('id')
-      .eq('area_season_id', seasonId)
-      .limit(1)
-      .maybeSingle()
-
-    if (existing) return existing.id
-
-    const { data: season } = await supabase
-      .from('area_seasons')
-      .select('season_year')
-      .eq('id', seasonId)
-      .single()
-
-    const { data: created, error } = await supabase
-      .from('sampling_campaigns')
-      .insert({
-        organization_id: orgId,
-        area_season_id: seasonId,
-        name: `Amostragem ${season?.season_year || ''}`.trim(),
-        source: 'sim',
-      })
-      .select('id')
-      .single()
-
-    if (error) throw new Error(`Erro ao criar campanha: ${error.message}`)
-    return created.id
   }
 
   const handleProcessFile = async () => {
@@ -200,24 +149,14 @@ export function GeographicImportWizard({
       const actualPath = uploadData?.path || newFilePath
 
       const { data, error: fnError } = await supabase.functions.invoke('parse-shapefile', {
-        body: {
-          storagePath: actualPath,
-          action,
-          projection,
-        },
+        body: { storagePath: actualPath, action, projection },
       })
 
       if (fnError || !data?.success) {
         throw new Error(data?.error || fnError?.message || 'Falha ao processar arquivo')
       }
 
-      let campaignId = ''
-      if (action !== 'update_boundary' && selectedSeasonId) {
-        campaignId = await findOrCreateCampaign(selectedSeasonId)
-      }
-
       setPreviewData(data)
-      setResolvedCampaignId(campaignId)
       setFilePath(actualPath)
       setStep(2)
     } catch (err: any) {
@@ -233,7 +172,7 @@ export function GeographicImportWizard({
       const { error } = await supabase.rpc('commit_geographic_import', {
         p_import_id: crypto.randomUUID(),
         p_area_id: area.id,
-        p_campaign_id: resolvedCampaignId || null,
+        p_campaign_id: null,
         p_action: action,
         p_boundary_geojson: previewData!.boundary,
         p_points: previewData!.points,
