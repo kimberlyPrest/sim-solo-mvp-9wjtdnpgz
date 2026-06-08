@@ -184,9 +184,6 @@ export function GeographicImportWizard({
         variant: 'destructive',
       })
     }
-    if (action !== 'update_boundary' && !selectedSeasonId) {
-      return toast({ title: 'Erro', description: 'Selecione uma safra.', variant: 'destructive' })
-    }
 
     setIsProcessing(true)
     try {
@@ -215,7 +212,7 @@ export function GeographicImportWizard({
       }
 
       let campaignId = ''
-      if (action !== 'update_boundary') {
+      if (action !== 'update_boundary' && selectedSeasonId) {
         campaignId = await findOrCreateCampaign(selectedSeasonId)
       }
 
@@ -277,8 +274,6 @@ export function GeographicImportWizard({
     }
   }
 
-  const seasonLabel = (s: Season) => (s.crop ? `${s.season_year} (${s.crop})` : s.season_year)
-
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -323,30 +318,6 @@ export function GeographicImportWizard({
             </div>
 
             <div className="space-y-4">
-              {action !== 'update_boundary' && (
-                <div className="space-y-2">
-                  <Label>Safra</Label>
-                  {seasons.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      Nenhuma safra cadastrada para esta área. Cadastre uma safra primeiro.
-                    </p>
-                  ) : (
-                    <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione a safra..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {seasons.map((s) => (
-                          <SelectItem key={s.id} value={s.id}>
-                            {seasonLabel(s)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              )}
-
               <div className="space-y-2">
                 <Label>Projeção</Label>
                 <Select value={projection} onValueChange={setProjection}>
@@ -445,7 +416,6 @@ export function GeographicImportWizard({
               </Alert>
             )}
 
-            {/* Map container: overflow-hidden + isolate prevent Leaflet layers from escaping the modal */}
             <div
               className="relative rounded-md overflow-hidden border border-border/40"
               style={{ height: 350, isolation: 'isolate' }}
