@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Search, Map, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -23,6 +23,7 @@ import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
 import { deleteAreaCascade } from '@/lib/entity-deletion'
 
 export default function AreasPage() {
+  const navigate = useNavigate()
   const { organization, hasRole } = useAuth()
   type AreaWithFarm = Tables<'areas'> & {
     farms: { name: string; producers: { name: string } | null } | null
@@ -77,21 +78,28 @@ export default function AreasPage() {
   const handleCreate = async (data: AreaFormData) => {
     if (!organization) return
     setIsSubmitting(true)
-    const { error } = await supabase.from('areas').insert([
-      {
-        ...data,
-        organization_id: organization.id,
-        status: 'active',
-      },
-    ])
+    const { data: createdArea, error } = await supabase
+      .from('areas')
+      .insert([
+        {
+          farm_id: data.farm_id,
+          name: data.name,
+          notes: data.notes || null,
+          organization_id: organization.id,
+          status: 'active',
+        },
+      ])
+      .select('id')
+      .single()
     setIsSubmitting(false)
 
     if (error) {
       toast({ title: 'Erro', description: error.message, variant: 'destructive' })
     } else {
-      toast({ title: 'Sucesso', description: 'Área criada com sucesso.' })
+      toast({ title: 'Sucesso', description: 'Talhão criado com sucesso.' })
       setIsSheetOpen(false)
-      fetchData()
+      if (createdArea?.id) navigate(`/areas/${createdArea.id}?setup=geo`)
+      else fetchData()
     }
   }
 
@@ -120,19 +128,19 @@ export default function AreasPage() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Áreas / Talhões</h1>
-          <p className="text-muted-foreground">Controle de áreas de cultivo.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Talhões</h1>
+          <p className="text-muted-foreground">Controle operacional das áreas de cultivo.</p>
         </div>
         {canEdit && (
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
               <Button>
-                <Plus className="mr-2 h-4 w-4" /> Nova Área
+                <Plus className="mr-2 h-4 w-4" /> Novo Talhão
               </Button>
             </SheetTrigger>
             <SheetContent className="w-full sm:max-w-md overflow-y-auto">
               <SheetHeader className="mb-6">
-                <SheetTitle>Cadastrar Área</SheetTitle>
+                <SheetTitle>Cadastrar Talhão</SheetTitle>
               </SheetHeader>
               <AreaForm
                 farms={farms}
@@ -171,7 +179,7 @@ export default function AreasPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome da Área</TableHead>
+                    <TableHead>Talhão</TableHead>
                     <TableHead>Fazenda</TableHead>
                     <TableHead>Produtor</TableHead>
                     <TableHead>Status</TableHead>

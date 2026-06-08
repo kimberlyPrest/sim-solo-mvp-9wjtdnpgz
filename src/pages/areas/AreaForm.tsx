@@ -23,7 +23,6 @@ import {
 const schema = z.object({
   farm_id: z.string().min(1, 'Fazenda é obrigatória'),
   name: z.string().min(1, 'Nome é obrigatório'),
-  declared_area_ha: z.coerce.number().optional(),
   notes: z.string().optional(),
 })
 
@@ -43,7 +42,6 @@ export function AreaForm({ initialData, farms, onSubmit, isSubmitting, onCancel 
     defaultValues: {
       farm_id: initialData?.farm_id || '',
       name: initialData?.name || '',
-      declared_area_ha: initialData?.declared_area_ha || undefined,
       notes: initialData?.notes || '',
     },
   })
@@ -84,22 +82,9 @@ export function AreaForm({ initialData, farms, onSubmit, isSubmitting, onCancel 
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome do Talhão / Área</FormLabel>
+              <FormLabel>Nome do Talhão</FormLabel>
               <FormControl>
                 <Input placeholder="Ex: Talhão 01" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="declared_area_ha"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Área Declarada (ha)</FormLabel>
-              <FormControl>
-                <Input type="number" step="0.01" {...field} value={field.value ?? ''} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -125,7 +110,7 @@ export function AreaForm({ initialData, farms, onSubmit, isSubmitting, onCancel 
             </Button>
           )}
           <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Salvando...' : 'Salvar Área'}
+            {isSubmitting ? 'Salvando...' : 'Salvar Talhão'}
           </Button>
         </div>
       </form>

@@ -11,6 +11,9 @@ import {
   FlaskConical,
   ArrowLeft,
   Trash2,
+  CheckCircle2,
+  CircleDashed,
+  ClipboardList,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -26,7 +29,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { FarmForm, FarmFormData } from './FarmForm'
+import { AreaForm, AreaFormData } from '../areas/AreaForm'
 import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
 import { deleteFarmCascade } from '@/lib/entity-deletion'
 import { updateFarmLocationFromAreaMajority } from '@/lib/farm-location'
@@ -35,11 +40,18 @@ type FarmAreaData = {
   id: string
   name: string
   calculated_area_ha: number | null
-
   boundary: any | null
   point_count: number
+  season_count: number
+  measurement_count: number
+  recommendation_count: number
   last_sample_date: string | null
 }
+
+type AreaStatusStats = Pick<
+  FarmAreaData,
+  'season_count' | 'measurement_count' | 'recommendation_count' | 'last_sample_date'
+>
 
 const AREA_PALETTE = [
   '#a8e63a',
@@ -53,6 +65,64 @@ const AREA_PALETTE = [
   '#84cc16',
   '#f43f5e',
 ]
+
+const EMPTY_STATUS: AreaStatusStats = {
+  season_count: 0,
+  measurement_count: 0,
+  recommendation_count: 0,
+  last_sample_date: null,
+}
+
+function getAreaStage(area: FarmAreaData) {
+  if (!area.boundary) {
+    return {
+      label: 'Geo pendente',
+      description: 'Configurar contorno e pontos',
+      className: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+      icon: CircleDashed,
+    }
+  }
+
+  if (area.point_count === 0) {
+    return {
+      label: 'Sem pontos',
+      description: 'Revise o shapefile',
+      className: 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300',
+      icon: Crosshair,
+    }
+  }
+
+  if (area.measurement_count === 0) {
+    return {
+      label: 'Solo pendente',
+      description: 'Importar análise laboratorial',
+      className: 'border-blue-500/30 bg-blue-500/10 text-blue-700 dark:text-blue-300',
+      icon: FlaskConical,
+    }
+  }
+
+  if (area.recommendation_count === 0) {
+    return {
+      label: 'Pronto para recomendação',
+      description: 'Análise disponível',
+      className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300',
+      icon: ClipboardList,
+    }
+  }
+
+  return {
+    label: 'Completo',
+    description: 'Recomendação vinculada',
+    className: 'border-primary/30 bg-primary/10 text-primary',
+    icon: CheckCircle2,
+  }
+}
+
+function areaHref(area: FarmAreaData) {
+  if (!area.boundary) return `/areas/${area.id}?setup=geo`
+  if (area.measurement_count === 0) return `/areas/${area.id}?setup=soil`
+  return `/areas/${area.id}`
+}
 
 export default function FarmDetailsPage() {
   const { id } = useParams<{ id: string }>()
@@ -77,10 +147,65 @@ export default function FarmDetailsPage() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [areaSheetOpen, setAreaSheetOpen] = useState(false)
+  const [isAreaSubmitting, setIsAreaSubmitting] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
   const canEdit = hasRole(['admin', 'technician'])
+
+  async function loadAreaStatuses(areaIds: string[]): Promise<Record<string, AreaStatusStats>> {
+    const statusByArea = Object.fromEntries(areaIds.map((areaId) => [areaId, { ...EMPTY_STATUS }]))
+    if (areaIds.length === 0) return statusByArea
+
+    const { data: seasons, error: seasonsError } = await (supabase.from as any)('area_seasons')
+      .select('id, area_id, sample_date')
+      .in('area_id', areaIds)
+
+    if (seasonsError || !seasons?.length) return statusByArea
+
+    const seasonToArea = new Map<string, string>()
+    seasons.forEach((season: any) => {
+      seasonToArea.set(season.id, season.area_id)
+      const current = statusByArea[season.area_id] || { ...EMPTY_STATUS }
+      current.season_count += 1
+      if (
+        season.sample_date &&
+        (!current.last_sample_date || season.sample_date > current.last_sample_date)
+      ) {
+        current.last_sample_date = season.sample_date
+      }
+      statusByArea[season.area_id] = current
+    })
+
+    const seasonIds = seasons.map((season: any) => season.id)
+    const [measurementsRes, recommendationsRes] = await Promise.all([
+      (supabase.from as any)('soil_measurements')
+        .select('area_season_id')
+        .in('area_season_id', seasonIds),
+      (supabase.from as any)('recommendation_sets')
+        .select('area_season_id')
+        .in('area_season_id', seasonIds),
+    ])
+
+    if (!measurementsRes.error) {
+      ;(measurementsRes.data || []).forEach((row: any) => {
+        const areaId = seasonToArea.get(row.area_season_id)
+        if (!areaId) return
+        statusByArea[areaId].measurement_count += 1
+      })
+    }
+
+    if (!recommendationsRes.error) {
+      ;(recommendationsRes.data || []).forEach((row: any) => {
+        const areaId = seasonToArea.get(row.area_season_id)
+        if (!areaId) return
+        statusByArea[areaId].recommendation_count += 1
+      })
+    }
+
+    return statusByArea
+  }
 
   const fetchData = async () => {
     if (!organization || !id) return
@@ -101,18 +226,23 @@ export default function FarmDetailsPage() {
       if (farmData) setFarm(farmData as any)
       if (prodRes.data) setProducers(prodRes.data)
 
-      const allAreas: FarmAreaData[] = (farmData.areas || [])
+      const baseAreas: FarmAreaData[] = (farmData.areas || [])
         .filter((a) => a.status !== 'archived')
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((a) => ({
           id: a.id,
           name: a.name,
           calculated_area_ha: a.calculated_area_ha,
-
           boundary: null,
           point_count: 0,
-          last_sample_date: null,
+          ...EMPTY_STATUS,
         }))
+
+      const statusByArea = await loadAreaStatuses(baseAreas.map((area) => area.id))
+      const allAreas = baseAreas.map((area) => ({
+        ...area,
+        ...(statusByArea[area.id] || EMPTY_STATUS),
+      }))
 
       const mapRes = await supabase.rpc('get_farm_map_data', { p_farm_id: id })
       if (!mapRes.error && mapRes.data) {
@@ -124,7 +254,7 @@ export default function FarmDetailsPage() {
                 ...a,
                 boundary: mapById[a.id].boundary,
                 point_count: mapById[a.id].point_count,
-                last_sample_date: mapById[a.id].last_sample_date,
+                last_sample_date: mapById[a.id].last_sample_date ?? a.last_sample_date,
                 calculated_area_ha: mapById[a.id].calculated_area_ha ?? a.calculated_area_ha,
               }
             : a,
@@ -170,6 +300,35 @@ export default function FarmDetailsPage() {
       toast({ title: 'Sucesso', description: 'Fazenda atualizada.' })
       setEditOpen(false)
       fetchData()
+    }
+  }
+
+  const handleCreateArea = async (data: AreaFormData) => {
+    if (!organization || !id) return
+    setIsAreaSubmitting(true)
+    try {
+      const { data: createdArea, error } = await supabase
+        .from('areas')
+        .insert([
+          {
+            farm_id: id,
+            name: data.name,
+            notes: data.notes || null,
+            organization_id: organization.id,
+            status: 'active',
+          },
+        ])
+        .select('id')
+        .single()
+
+      if (error) throw error
+      toast({ title: 'Sucesso', description: 'Talhão criado com sucesso.' })
+      setAreaSheetOpen(false)
+      if (createdArea?.id) navigate(`/areas/${createdArea.id}?setup=geo`)
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsAreaSubmitting(false)
     }
   }
 
@@ -219,7 +378,12 @@ export default function FarmDetailsPage() {
     [areas],
   )
 
-  const areasWithData = useMemo(() => areas.filter((a) => a.point_count > 0).length, [areas])
+  const configuredAreas = useMemo(() => areas.filter((a) => a.boundary).length, [areas])
+  const areasWithData = useMemo(() => areas.filter((a) => a.measurement_count > 0).length, [areas])
+  const completeAreas = useMemo(
+    () => areas.filter((a) => a.recommendation_count > 0).length,
+    [areas],
+  )
 
   if (loading) {
     return (
@@ -236,15 +400,14 @@ export default function FarmDetailsPage() {
 
   return (
     <div className="space-y-0 animate-fade-in-up pb-10">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-4 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0">
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold tracking-tight">{farm.name}</h1>
+              <h1 className="text-2xl font-bold tracking-tight truncate">{farm.name}</h1>
               <Badge
                 variant={farm.status === 'active' ? 'default' : 'secondary'}
                 className="text-xs"
@@ -252,7 +415,7 @@ export default function FarmDetailsPage() {
                 {farm.status === 'active' ? 'Ativo' : 'Arquivado'}
               </Badge>
             </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
+            <p className="text-sm text-muted-foreground mt-0.5 truncate">
               {farm.producers?.name}
               {farm.city && (
                 <>
@@ -268,6 +431,9 @@ export default function FarmDetailsPage() {
         <div className="flex gap-2 shrink-0">
           {canEdit && (
             <>
+              <Button size="sm" onClick={() => setAreaSheetOpen(true)}>
+                <Plus className="h-4 w-4 mr-1" /> Novo Talhão
+              </Button>
               <Dialog open={editOpen} onOpenChange={setEditOpen}>
                 <DialogTrigger asChild>
                   <Button variant="outline" size="sm">
@@ -304,7 +470,6 @@ export default function FarmDetailsPage() {
         </div>
       </div>
 
-      {/* Map Hero */}
       <div
         className="relative rounded-xl overflow-hidden border border-border/60"
         style={{ height: 420 }}
@@ -317,10 +482,14 @@ export default function FarmDetailsPage() {
             </div>
           </div>
         ) : mapFeatures.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center bg-card text-muted-foreground gap-2">
+          <div className="h-full flex flex-col items-center justify-center bg-card text-muted-foreground gap-3">
             <Layers className="h-10 w-10 opacity-20" />
-            <p className="text-sm">Nenhum talhão com dados geográficos.</p>
-            <p className="text-xs">Importe shapefiles nos detalhes de cada área.</p>
+            <p className="text-sm">Nenhum talhão configurado no mapa.</p>
+            {canEdit && (
+              <Button size="sm" onClick={() => setAreaSheetOpen(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Criar primeiro talhão
+              </Button>
+            )}
           </div>
         ) : (
           <GeoMap
@@ -336,15 +505,18 @@ export default function FarmDetailsPage() {
           />
         )}
 
-        {/* HUD Overlay */}
         {!mapLoading && (
           <div className="absolute top-3 left-3 z-[1000] flex flex-col gap-2 pointer-events-none">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <div className="bg-background/80 backdrop-blur border border-border/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5 text-primary" />
                 <span className="font-mono text-xs text-foreground/90">
                   {areas.length} talhão{areas.length !== 1 ? 'ões' : ''}
                 </span>
+              </div>
+              <div className="bg-background/80 backdrop-blur border border-border/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-primary" />
+                <span className="font-mono text-xs text-foreground/90">{configuredAreas} geo</span>
               </div>
               {totalArea > 0 && (
                 <div className="bg-background/80 backdrop-blur border border-border/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
@@ -358,7 +530,15 @@ export default function FarmDetailsPage() {
                 <div className="bg-background/80 backdrop-blur border border-border/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
                   <FlaskConical className="h-3.5 w-3.5 text-accent" />
                   <span className="font-mono text-xs text-foreground/90">
-                    {areasWithData} com análise
+                    {areasWithData} com solo
+                  </span>
+                </div>
+              )}
+              {completeAreas > 0 && (
+                <div className="bg-background/80 backdrop-blur border border-border/60 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                  <span className="font-mono text-xs text-foreground/90">
+                    {completeAreas} completos
                   </span>
                 </div>
               )}
@@ -366,7 +546,6 @@ export default function FarmDetailsPage() {
           </div>
         )}
 
-        {/* Map tip */}
         {mapFeatures.length > 0 && (
           <div className="absolute bottom-3 right-3 z-[1000] pointer-events-none">
             <div className="bg-background/70 backdrop-blur border border-border/50 rounded px-2 py-1">
@@ -378,46 +557,49 @@ export default function FarmDetailsPage() {
         )}
       </div>
 
-      {/* Area Cards */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             Talhões
           </h2>
           {canEdit && (
-            <Button size="sm" variant="outline" asChild>
-              <Link to="/areas">
-                <Plus className="h-3.5 w-3.5 mr-1.5" /> Nova Área
-              </Link>
+            <Button size="sm" variant="outline" onClick={() => setAreaSheetOpen(true)}>
+              <Plus className="h-3.5 w-3.5 mr-1.5" /> Novo Talhão
             </Button>
           )}
         </div>
 
         {areas.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/50 py-12 flex flex-col items-center gap-2 text-muted-foreground">
+          <div className="rounded-xl border border-dashed border-border/50 py-12 flex flex-col items-center gap-3 text-muted-foreground">
             <Layers className="h-8 w-8 opacity-20" />
             <p className="text-sm">Nenhum talhão cadastrado nesta fazenda.</p>
+            {canEdit && (
+              <Button size="sm" onClick={() => setAreaSheetOpen(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" /> Criar talhão
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {areas.map((area, i) => {
               const accentColor = AREA_PALETTE[i % AREA_PALETTE.length]
               const area_ha = area.calculated_area_ha
+              const stage = getAreaStage(area)
+              const StageIcon = stage.icon
               return (
                 <Link
                   key={area.id}
-                  to={`/areas/${area.id}`}
+                  to={areaHref(area)}
                   className="group relative rounded-xl border border-border/50 bg-card p-4 hover:border-primary/40 transition-all hover:bg-card/80"
                 >
-                  {/* Color accent line */}
                   <div
                     className="absolute top-0 left-0 right-0 h-0.5 rounded-t-xl"
                     style={{ background: accentColor, opacity: 0.8 }}
                   />
 
-                  <div className="flex items-start justify-between">
-                    <div className="space-y-0.5">
-                      <p className="font-semibold text-sm group-hover:text-primary transition-colors">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className="font-semibold text-sm group-hover:text-primary transition-colors truncate">
                         {area.name}
                       </p>
                       {area_ha ? (
@@ -425,22 +607,29 @@ export default function FarmDetailsPage() {
                           {Number(area_ha).toFixed(2)} ha
                         </p>
                       ) : (
-                        <p className="font-mono text-xs text-muted-foreground">— ha</p>
+                        <p className="font-mono text-xs text-muted-foreground">Área a calcular</p>
                       )}
                     </div>
                     <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors mt-0.5 shrink-0" />
                   </div>
 
-                  <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
-                    {area.point_count > 0 ? (
+                  <div className={`mt-3 rounded-lg border px-2.5 py-2 ${stage.className}`}>
+                    <div className="flex items-center gap-1.5">
+                      <StageIcon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="text-xs font-medium truncate">{stage.label}</span>
+                    </div>
+                    <p className="mt-0.5 text-[11px] opacity-80">{stage.description}</p>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Crosshair className="h-3 w-3" style={{ color: accentColor }} />
+                      {area.point_count} ponto{area.point_count !== 1 ? 's' : ''}
+                    </span>
+                    {area.measurement_count > 0 && (
                       <span className="flex items-center gap-1">
-                        <Crosshair className="h-3 w-3" style={{ color: accentColor }} />
-                        {area.point_count} ponto{area.point_count !== 1 ? 's' : ''}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 opacity-40">
-                        <Crosshair className="h-3 w-3" />
-                        Sem análise
+                        <FlaskConical className="h-3 w-3" />
+                        Solo importado
                       </span>
                     )}
                     {area.last_sample_date && (
@@ -459,6 +648,21 @@ export default function FarmDetailsPage() {
           </div>
         )}
       </div>
+
+      <Sheet open={areaSheetOpen} onOpenChange={setAreaSheetOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Novo talhão em {farm.name}</SheetTitle>
+          </SheetHeader>
+          <AreaForm
+            initialData={{ farm_id: farm.id }}
+            farms={[{ id: farm.id, name: farm.name }]}
+            onSubmit={handleCreateArea}
+            isSubmitting={isAreaSubmitting}
+            onCancel={() => setAreaSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
 
       <DeleteEntityDialog
         open={deleteOpen}

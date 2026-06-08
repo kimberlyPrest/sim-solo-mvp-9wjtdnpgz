@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft,
   Activity,
@@ -126,6 +126,7 @@ function DistributionBar({ points }: { points: SoilPointData[] }) {
 export default function AreaDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { hasRole } = useAuth()
   const { toast } = useToast()
   const canEdit = hasRole(['admin', 'technician'])
@@ -193,6 +194,21 @@ export default function AreaDetailsPage() {
     }
     loadAll()
   }, [id, loadMapData])
+
+  useEffect(() => {
+    if (loading || !area || !canEdit) return
+    const setup = searchParams.get('setup')
+    if (!setup) return
+
+    if (setup === 'geo') {
+      if (!boundary) setGeoWizardOpen(true)
+    } else if (setup === 'soil') {
+      if (boundary) setSoilWizardOpen(true)
+      else setGeoWizardOpen(true)
+    }
+
+    setSearchParams({}, { replace: true })
+  }, [area, boundary, canEdit, loading, searchParams, setSearchParams])
 
   useEffect(() => {
     if (!id || !selectedSeasonId || !selectedAttribute) {
