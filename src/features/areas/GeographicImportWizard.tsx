@@ -24,9 +24,8 @@ import { supabase } from '@/lib/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { GeoMap } from '@/components/map/GeoMap'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Loader2, AlertTriangle, Plus } from 'lucide-react'
+import { Loader2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
-import { NewCampaignModal } from '@/features/campaigns/NewCampaignModal'
 
 type PreviewData = {
   boundary: any
@@ -41,27 +40,41 @@ type PreviewData = {
   }
 }
 
+type Season = { id: string; season_year: string; crop: string | null }
+
 export function GeographicImportWizard({
   open,
   onOpenChange,
   area,
-  campaigns,
   onSuccess,
-  onCampaignCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  area: { id: string; declared_area_ha: number | null }
-  campaigns: { id: string; name: string }[]
+  area: { id: string }
   onSuccess: () => void
-  onCampaignCreated?: (newId: string) => void
 }) {
   const { organization } = useAuth()
+  const { toast } = useToast()
   const [orgId, setOrgId] = useState<string | null>(organization?.id || null)
-  const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
+
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('')
+
+  const [step, setStep] = useState<1 | 2>(1)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [action, setAction] = useState<'initial' | 'add_points' | 'update_boundary'>('initial')
+  const [projection, setProjection] = useState<string>('EPSG:4326')
+  const [justification, setJustification] = useState<string>('')
+  const [file, setFile] = useState<File | null>(null)
+  const [previewData, setPreviewData] = useState<PreviewData | null>(null)
+  const [resolvedCampaignId, setResolvedCampaignId] = useState<string>('')
+  const [filePath, setFilePath] = useState<string>('')
 
   useEffect(() => {
-    if (open && area.id && !organization?.id) {
+    if (!open) return
+    if (organization?.id) {
+      setOrgId(organization.id)
+    } else {
       supabase
         .from('areas')
         .select('organization_id')
@@ -70,42 +83,30 @@ export function GeographicImportWizard({
         .then(({ data }) => {
           if (data) setOrgId(data.organization_id)
         })
-    } else if (organization?.id) {
-      setOrgId(organization.id)
     }
+
+    supabase
+      .from('area_seasons')
+      .select('id, season_year, crop')
+      .eq('area_id', area.id)
+      .order('season_year', { ascending: false })
+      .then(({ data }) => {
+        if (data) {
+          setSeasons(data)
+          if (data.length > 0) setSelectedSeasonId(data[0].id)
+        }
+      })
   }, [open, area.id, organization?.id])
-  const { toast } = useToast()
-
-  const [localCampaigns, setLocalCampaigns] = useState<{ id: string; name: string }[]>(campaigns)
-
-  useEffect(() => {
-    setLocalCampaigns(campaigns)
-  }, [campaigns])
-
-  const [step, setStep] = useState<1 | 2>(1)
-  const [isProcessing, setIsProcessing] = useState(false)
-
-  const [action, setAction] = useState<string>('initial')
-  const [campaignId, setCampaignId] = useState<string>('')
-  const [sourceCampaignId, setSourceCampaignId] = useState<string>('')
-  const [projection, setProjection] = useState<string>('EPSG:4326')
-  const [justification, setJustification] = useState<string>('')
-  const [file, setFile] = useState<File | null>(null)
-
-  const [previewData, setPreviewData] = useState<PreviewData | null>(null)
-  const [importId, setImportId] = useState<string>('')
-  const [filePath, setFilePath] = useState<string>('')
 
   const resetState = () => {
     setStep(1)
     setAction('initial')
-    setCampaignId('')
-    setSourceCampaignId('')
+    setSelectedSeasonId(seasons[0]?.id || '')
     setProjection('EPSG:4326')
     setJustification('')
     setFile(null)
     setPreviewData(null)
-    setImportId('')
+    setResolvedCampaignId('')
     setFilePath('')
   }
 
@@ -114,18 +115,38 @@ export function GeographicImportWizard({
     onOpenChange(o)
   }
 
-  const handleProcessFile = async () => {
-    if (action === 'reuse_points') {
-      if (!sourceCampaignId || !campaignId) {
-        return toast({
-          title: 'Erro',
-          description: 'Selecione as campanhas origem e destino.',
-          variant: 'destructive',
-        })
-      }
-      return executeReusePoints()
-    }
+  const findOrCreateCampaign = async (seasonId: string): Promise<string> => {
+    const { data: existing } = await supabase
+      .from('sampling_campaigns')
+      .select('id')
+      .eq('area_season_id', seasonId)
+      .limit(1)
+      .maybeSingle()
 
+    if (existing) return existing.id
+
+    const { data: season } = await supabase
+      .from('area_seasons')
+      .select('season_year')
+      .eq('id', seasonId)
+      .single()
+
+    const { data: created, error } = await supabase
+      .from('sampling_campaigns')
+      .insert({
+        organization_id: orgId,
+        area_season_id: seasonId,
+        name: `Amostragem ${season?.season_year || ''}`.trim(),
+        source: 'sim',
+      })
+      .select('id')
+      .single()
+
+    if (error) throw new Error(`Erro ao criar campanha: ${error.message}`)
+    return created.id
+  }
+
+  const handleProcessFile = async () => {
     if (!file) {
       return toast({
         title: 'Erro',
@@ -140,26 +161,19 @@ export function GeographicImportWizard({
         variant: 'destructive',
       })
     }
-    if (['initial', 'new_points'].includes(action) && !campaignId) {
-      return toast({
-        title: 'Erro',
-        description: 'Selecione uma campanha.',
-        variant: 'destructive',
-      })
+    if (action !== 'update_boundary' && !selectedSeasonId) {
+      return toast({ title: 'Erro', description: 'Selecione uma safra.', variant: 'destructive' })
     }
 
     setIsProcessing(true)
     try {
-      if (!orgId) throw new Error('Organização não identificada para esta área.')
+      if (!orgId) throw new Error('Organização não identificada.')
       const ext = file.name.split('.').pop()
-      const newImportId = crypto.randomUUID()
-      const newFilePath = `${orgId}/${newImportId}.${ext}`
+      const newFilePath = `${orgId}/${crypto.randomUUID()}.${ext}`
 
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('soil-imports')
-        .upload(newFilePath, file, {
-          upsert: true,
-        })
+        .upload(newFilePath, file, { upsert: true })
 
       if (uploadError) throw new Error(`Falha no upload: ${uploadError.message}`)
 
@@ -169,7 +183,6 @@ export function GeographicImportWizard({
         body: {
           storagePath: actualPath,
           action,
-          declaredAreaHa: area.declared_area_ha,
           projection,
         },
       })
@@ -178,30 +191,17 @@ export function GeographicImportWizard({
         throw new Error(data?.error || fnError?.message || 'Falha ao processar arquivo')
       }
 
+      let campaignId = ''
+      if (action !== 'update_boundary') {
+        campaignId = await findOrCreateCampaign(selectedSeasonId)
+      }
+
       setPreviewData(data)
-      setImportId(newImportId)
+      setResolvedCampaignId(campaignId)
       setFilePath(actualPath)
       setStep(2)
-    } catch (err: Error | any) {
+    } catch (err: any) {
       toast({ title: 'Erro no processamento', description: err.message, variant: 'destructive' })
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const executeReusePoints = async () => {
-    setIsProcessing(true)
-    try {
-      const { error } = await supabase.rpc('reuse_campaign_points', {
-        p_source_campaign_id: sourceCampaignId,
-        p_target_campaign_id: campaignId,
-        p_org_id: orgId as string,
-      })
-      if (error) throw error
-      toast({ title: 'Sucesso', description: 'Pontos reutilizados com sucesso.' })
-      onSuccess()
-    } catch (err: Error | any) {
-      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsProcessing(false)
     }
@@ -211,13 +211,13 @@ export function GeographicImportWizard({
     setIsProcessing(true)
     try {
       const { error } = await supabase.rpc('commit_geographic_import', {
-        p_import_id: importId,
+        p_import_id: crypto.randomUUID(),
         p_area_id: area.id,
-        p_campaign_id: campaignId || null,
+        p_campaign_id: resolvedCampaignId || null,
         p_action: action,
-        p_boundary_geojson: previewData.boundary,
-        p_points: previewData.points,
-        p_calculated_area_ha: previewData.calculatedAreaHa,
+        p_boundary_geojson: previewData!.boundary,
+        p_points: previewData!.points,
+        p_calculated_area_ha: previewData!.calculatedAreaHa,
         p_source_srid: projection === 'EPSG:4326' ? 4326 : 32723,
         p_justification: justification,
         p_org_id: orgId as string,
@@ -229,22 +229,24 @@ export function GeographicImportWizard({
       if (error) throw error
       toast({ title: 'Sucesso', description: 'Importação concluída com sucesso.' })
       onSuccess()
-    } catch (err: Error | any) {
+    } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsProcessing(false)
     }
   }
 
+  const seasonLabel = (s: Season) => (s.crop ? `${s.season_year} (${s.crop})` : s.season_year)
+
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Assistente de Importação Geográfica</DialogTitle>
+          <DialogTitle>Importar Dados Geográficos</DialogTitle>
           <DialogDescription>
             {step === 1
-              ? 'Configure e faça o upload dos dados espaciais (Shapefile em ZIP).'
-              : 'Revise os dados antes de confirmar a importação.'}
+              ? 'Configure e faça o upload do Shapefile (ZIP).'
+              : 'Revise os dados antes de confirmar.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -254,154 +256,92 @@ export function GeographicImportWizard({
               <Label>Ação</Label>
               <RadioGroup
                 value={action}
-                onValueChange={setAction}
-                className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                onValueChange={(v) => setAction(v as typeof action)}
+                className="grid grid-cols-1 sm:grid-cols-3 gap-3"
               >
-                <div
-                  className={`flex items-center space-x-2 border p-3 rounded-md transition-colors ${action === 'initial' ? 'border-primary bg-primary/5' : ''}`}
-                >
-                  <RadioGroupItem value="initial" id="initial" />
-                  <Label htmlFor="initial" className="cursor-pointer font-medium w-full">
-                    Configuração Inicial
-                  </Label>
-                </div>
-                <div
-                  className={`flex items-center space-x-2 border p-3 rounded-md transition-colors ${action === 'new_points' ? 'border-primary bg-primary/5' : ''}`}
-                >
-                  <RadioGroupItem value="new_points" id="new_points" />
-                  <Label htmlFor="new_points" className="cursor-pointer font-medium w-full">
-                    Novos Pontos
-                  </Label>
-                </div>
-                <div
-                  className={`flex items-center space-x-2 border p-3 rounded-md transition-colors ${action === 'update_boundary' ? 'border-primary bg-primary/5' : ''}`}
-                >
-                  <RadioGroupItem value="update_boundary" id="update_boundary" />
-                  <Label htmlFor="update_boundary" className="cursor-pointer font-medium w-full">
-                    Atualizar Contorno
-                  </Label>
-                </div>
-                <div
-                  className={`flex items-center space-x-2 border p-3 rounded-md transition-colors ${action === 'reuse_points' ? 'border-primary bg-primary/5' : ''}`}
-                >
-                  <RadioGroupItem value="reuse_points" id="reuse_points" />
-                  <Label htmlFor="reuse_points" className="cursor-pointer font-medium w-full">
-                    Reutilizar Pontos
-                  </Label>
-                </div>
+                {(
+                  [
+                    { value: 'initial', label: 'Configuração Inicial' },
+                    { value: 'add_points', label: 'Adicionar Pontos' },
+                    { value: 'update_boundary', label: 'Atualizar Contorno' },
+                  ] as const
+                ).map(({ value, label }) => (
+                  <div
+                    key={value}
+                    className={`flex items-center space-x-2 border p-3 rounded-md transition-colors ${
+                      action === value ? 'border-primary bg-primary/5' : ''
+                    }`}
+                  >
+                    <RadioGroupItem value={value} id={value} />
+                    <Label htmlFor={value} className="cursor-pointer font-medium w-full">
+                      {label}
+                    </Label>
+                  </div>
+                ))}
               </RadioGroup>
             </div>
 
-            {action === 'reuse_points' ? (
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
+              {action !== 'update_boundary' && (
                 <div className="space-y-2">
-                  <Label>Campanha Origem</Label>
-                  <Select value={sourceCampaignId} onValueChange={setSourceCampaignId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {localCampaigns.map((c: any) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Campanha Destino</Label>
-                  <div className="flex items-center gap-2">
-                    <Select value={campaignId} onValueChange={setCampaignId}>
-                      <SelectTrigger className="flex-1">
-                        <SelectValue placeholder="Selecione..." />
+                  <Label>Safra</Label>
+                  {seasons.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      Nenhuma safra cadastrada para esta área. Cadastre uma safra primeiro.
+                    </p>
+                  ) : (
+                    <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a safra..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {localCampaigns.map((c: any) => (
-                          <SelectItem key={c.id} value={c.id}>
-                            {c.name}
+                        {seasons.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {seasonLabel(s)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      type="button"
-                      onClick={() => setIsNewCampaignOpen(true)}
-                      title="Nova Campanha"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  )}
                 </div>
+              )}
+
+              <div className="space-y-2">
+                <Label>Projeção</Label>
+                <Select value={projection} onValueChange={setProjection}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="EPSG:4326">WGS84 (Graus Decimais) — EPSG:4326</SelectItem>
+                    <SelectItem value="EPSG:32723">UTM Zona 23S (Metros) — EPSG:32723</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            ) : (
-              <div className="space-y-4">
-                {action !== 'update_boundary' && (
-                  <div className="space-y-2">
-                    <Label>Campanha</Label>
-                    <div className="flex items-center gap-2">
-                      <Select value={campaignId} onValueChange={setCampaignId}>
-                        <SelectTrigger className="flex-1">
-                          <SelectValue placeholder="Selecione..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {localCampaigns.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        type="button"
-                        onClick={() => setIsNewCampaignOpen(true)}
-                        title="Nova Campanha"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
+
+              <div className="space-y-2">
+                <Label>Arquivo ZIP (Shapefile)</Label>
+                <Input
+                  type="file"
+                  accept=".zip"
+                  onChange={(e) => setFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-xs text-muted-foreground">
+                  O ZIP deve conter .shp, .shx e .dbf correspondentes.
+                </p>
+              </div>
+
+              {action === 'update_boundary' && (
                 <div className="space-y-2">
-                  <Label>Projeção</Label>
-                  <Select value={projection} onValueChange={setProjection}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="EPSG:4326">WGS84 (Graus Decimais) - EPSG:4326</SelectItem>
-                      <SelectItem value="EPSG:32723">UTM Zona 23S (Metros) - EPSG:32723</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Arquivo ZIP (Shapefile)</Label>
-                  <Input
-                    type="file"
-                    accept=".zip"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  <Label>Justificativa para Alteração</Label>
+                  <Textarea
+                    value={justification}
+                    onChange={(e) => setJustification(e.target.value)}
+                    placeholder="Motivo para alterar o contorno da área..."
                   />
-                  <p className="text-xs text-muted-foreground">
-                    O ZIP deve conter arquivos .shp, .shx, .dbf correspondentes e apenas 1 camada de
-                    cada tipo.
-                  </p>
                 </div>
-                {action === 'update_boundary' && (
-                  <div className="space-y-2">
-                    <Label>Justificativa para Alteração</Label>
-                    <Textarea
-                      value={justification}
-                      onChange={(e) => setJustification(e.target.value)}
-                      placeholder="Motivo para alterar o contorno da área..."
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => handleOpenChange(false)}>
@@ -409,7 +349,7 @@ export function GeographicImportWizard({
               </Button>
               <Button onClick={handleProcessFile} disabled={isProcessing}>
                 {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {action === 'reuse_points' ? 'Reutilizar Pontos' : 'Processar Arquivo'}
+                Processar Arquivo
               </Button>
             </DialogFooter>
           </div>
@@ -422,48 +362,34 @@ export function GeographicImportWizard({
                 <h4 className="text-sm font-semibold mb-2">Resumo da Área</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Área Declarada:</span>{' '}
-                    <span className="font-medium">{area.declared_area_ha || '-'} ha</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>Área Calculada:</span>{' '}
+                    <span>Área Calculada:</span>
                     <span className="font-medium">
                       {previewData.calculatedAreaHa.toFixed(2)} ha
                     </span>
                   </div>
-                  {area.declared_area_ha && (
-                    <div className="flex justify-between">
-                      <span>Divergência:</span>
-                      <span
-                        className={`font-medium ${previewData.divergencePct > 5 ? 'text-destructive' : 'text-green-600'}`}
-                      >
-                        {previewData.divergencePct.toFixed(2)}%
-                      </span>
-                    </div>
-                  )}
                 </div>
               </Card>
               <Card className="p-4 bg-muted/30">
                 <h4 className="text-sm font-semibold mb-2">Resumo dos Pontos</h4>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span>Total de Pontos:</span>{' '}
+                    <span>Total de Pontos:</span>
                     <span className="font-medium">{previewData.points.length}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span>Pontos Internos:</span>{' '}
+                    <span>Pontos Internos:</span>
                     <span className="font-medium text-green-600">
                       {previewData.validationSummary.pointsInside}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>Pontos Externos:</span>{' '}
-                    <span
-                      className={`font-medium ${previewData.validationSummary.pointsOutside > 0 ? 'text-destructive' : ''}`}
-                    >
-                      {previewData.validationSummary.pointsOutside}
-                    </span>
-                  </div>
+                  {previewData.validationSummary.pointsOutside > 0 && (
+                    <div className="flex justify-between">
+                      <span>Pontos Externos:</span>
+                      <span className="font-medium text-destructive">
+                        {previewData.validationSummary.pointsOutside}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </Card>
             </div>
@@ -471,10 +397,9 @@ export function GeographicImportWizard({
             {previewData.validationSummary.pointsOutside > 0 && (
               <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Atenção: Pontos fora do contorno!</AlertTitle>
+                <AlertTitle>Pontos fora do contorno</AlertTitle>
                 <AlertDescription>
-                  Os seguintes pontos estão fora da área:{' '}
-                  {previewData.validationSummary.outsideCodes.join(', ')}.
+                  {previewData.validationSummary.outsideCodes.join(', ')}
                 </AlertDescription>
               </Alert>
             )}
@@ -485,7 +410,7 @@ export function GeographicImportWizard({
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setStep(1)} disabled={isProcessing}>
-                Voltar e Reconfigurar
+                Voltar
               </Button>
               <Button onClick={handleConfirm} disabled={isProcessing}>
                 {isProcessing && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
@@ -495,17 +420,6 @@ export function GeographicImportWizard({
           </div>
         )}
       </DialogContent>
-
-      <NewCampaignModal
-        open={isNewCampaignOpen}
-        onOpenChange={setIsNewCampaignOpen}
-        prefilledAreaId={area.id}
-        onSuccess={(newCamp) => {
-          setLocalCampaigns((prev) => [...prev, newCamp])
-          setCampaignId(newCamp.id)
-          if (onCampaignCreated) onCampaignCreated(newCamp.id)
-        }}
-      />
     </Dialog>
   )
 }

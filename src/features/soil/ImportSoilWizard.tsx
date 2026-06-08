@@ -23,11 +23,10 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
-import { Loader2, AlertTriangle, Plus } from 'lucide-react'
-import { NewCampaignModal } from '@/features/campaigns/NewCampaignModal'
+import { Loader2, AlertTriangle, Download } from 'lucide-react'
 
 const formSchema = z.object({
-  campaign_id: z.string().min(1, 'Campanha é obrigatória'),
+  season_id: z.string().min(1, 'Safra é obrigatória'),
   laboratory: z.string().min(1, 'Laboratório é obrigatório'),
   sample_date: z.string().optional(),
   result_date: z.string().optional(),
@@ -46,43 +45,114 @@ type PreviewData = {
   }
 }
 
+type Season = { id: string; season_year: string; crop: string | null }
+
 export function ImportSoilWizard({
   open,
   onOpenChange,
-  campaigns,
+  areaId,
   onSuccess,
-  onCampaignCreated,
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  campaigns: { id: string; name: string }[]
+  areaId: string
   onSuccess?: () => void
-  onCampaignCreated?: (newId: string) => void
 }) {
   const [step, setStep] = useState(1)
-  const [isNewCampaignOpen, setIsNewCampaignOpen] = useState(false)
   const [file, setFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false)
   const [previewData, setPreviewData] = useState<PreviewData | null>(null)
   const [payload, setPayload] = useState<Record<string, any> | null>(null)
+  const [seasons, setSeasons] = useState<Season[]>([])
   const { organization, session } = useAuth()
 
-  const [localCampaigns, setLocalCampaigns] = useState<{ id: string; name: string }[]>(campaigns)
-
   useEffect(() => {
-    setLocalCampaigns(campaigns)
-  }, [campaigns])
+    if (!open || !areaId) return
+    supabase
+      .from('area_seasons')
+      .select('id, season_year, crop')
+      .eq('area_id', areaId)
+      .order('season_year', { ascending: false })
+      .then(({ data }) => {
+        if (data) setSeasons(data)
+      })
+  }, [open, areaId])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { campaign_id: '', laboratory: '', source: 'sim' },
+    defaultValues: { season_id: '', laboratory: '', source: 'sim' },
   })
+
+  const seasonLabel = (s: Season) => (s.crop ? `${s.season_year} (${s.crop})` : s.season_year)
+
+  const findOrCreateCampaign = async (seasonId: string): Promise<string> => {
+    const { data: existing } = await supabase
+      .from('sampling_campaigns')
+      .select('id')
+      .eq('area_season_id', seasonId)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) return existing.id
+
+    const { data: season } = await supabase
+      .from('area_seasons')
+      .select('season_year')
+      .eq('id', seasonId)
+      .single()
+
+    const { data: created, error } = await supabase
+      .from('sampling_campaigns')
+      .insert({
+        organization_id: organization?.id,
+        area_season_id: seasonId,
+        name: `Amostragem ${season?.season_year || ''}`.trim(),
+        source: 'sim',
+      })
+      .select('id')
+      .single()
+
+    if (error) throw new Error(`Erro ao criar campanha: ${error.message}`)
+    return created.id
+  }
+
+  const downloadTemplate = async () => {
+    setIsDownloadingTemplate(true)
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/soil-analysis-excel`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({ action: 'generate_template' }),
+        },
+      )
+      if (!res.ok) throw new Error('Falha ao gerar template')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'template_analise_solo.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDownloadingTemplate(false)
+    }
+  }
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     if (!file)
       return toast({ title: 'Atenção', description: 'Selecione um arquivo .xlsx ou .xlsm' })
     setIsUploading(true)
     try {
+      const campaignId = await findOrCreateCampaign(data.season_id)
+
       const ext = file.name.split('.').pop()
       const storagePath = `${organization?.id}/${crypto.randomUUID()}.${ext}`
 
@@ -102,7 +172,7 @@ export function ImportSoilWizard({
           body: JSON.stringify({
             action: 'parse',
             storagePath,
-            campaignId: data.campaign_id,
+            campaignId,
             organizationId: organization?.id,
           }),
         },
@@ -112,9 +182,9 @@ export function ImportSoilWizard({
       if (!result.success) throw new Error(result.error)
 
       setPreviewData(result)
-      setPayload({ ...data, storagePath, originalName: file.name, fileSize: file.size })
+      setPayload({ ...data, campaignId, storagePath, originalName: file.name, fileSize: file.size })
       setStep(2)
-    } catch (err: Error | any) {
+    } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsUploading(false)
@@ -127,16 +197,16 @@ export function ImportSoilWizard({
       const { error } = await supabase.rpc('commit_soil_analysis_import', {
         p_import_id: crypto.randomUUID(),
         p_org_id: organization?.id,
-        p_campaign_id: payload.campaign_id,
-        p_file_path: payload.storagePath,
-        p_original_name: payload.originalName,
-        p_file_size: payload.fileSize,
-        p_data: previewData.data,
+        p_campaign_id: payload!.campaignId,
+        p_file_path: payload!.storagePath,
+        p_original_name: payload!.originalName,
+        p_file_size: payload!.fileSize,
+        p_data: previewData!.data,
         p_metadata: {
-          laboratory: payload.laboratory,
-          sample_date: payload.sample_date || null,
-          result_date: payload.result_date || null,
-          source: payload.source,
+          laboratory: payload!.laboratory,
+          sample_date: payload!.sample_date || null,
+          result_date: payload!.result_date || null,
+          source: payload!.source,
         },
       })
       if (error) throw error
@@ -144,7 +214,7 @@ export function ImportSoilWizard({
       onOpenChange(false)
       window.dispatchEvent(new CustomEvent('refresh-soil-analyses'))
       if (onSuccess) onSuccess()
-    } catch (err: Error | any) {
+    } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
       setIsUploading(false)
@@ -152,50 +222,73 @@ export function ImportSoilWizard({
   }
 
   const hasErrors =
-    previewData?.validationSummary?.errors?.length > 0 ||
-    previewData?.validationSummary?.unmatchedPoints > 0
+    (previewData?.validationSummary?.errors?.length ?? 0) > 0 ||
+    (previewData?.validationSummary?.unmatchedPoints ?? 0) > 0
+
+  const handleClose = (o: boolean) => {
+    if (!o) {
+      setStep(1)
+      setFile(null)
+      setPreviewData(null)
+      setPayload(null)
+      form.reset()
+    }
+    onOpenChange(o)
+  }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleClose}>
       <SheetContent className="sm:max-w-xl overflow-y-auto">
-        <SheetHeader className="mb-6">
+        <SheetHeader className="mb-4">
           <SheetTitle>Importar Análises de Solo</SheetTitle>
         </SheetHeader>
+
+        <div className="mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={downloadTemplate}
+            disabled={isDownloadingTemplate}
+            className="w-full"
+          >
+            {isDownloadingTemplate ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Download className="mr-2 h-4 w-4" />
+            )}
+            Baixar Template Excel
+          </Button>
+        </div>
 
         {step === 1 && (
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="campaign_id"
+                name="season_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Campanha</FormLabel>
-                    <div className="flex items-center gap-2">
-                      <Select onValueChange={field.onChange} value={field.value || undefined}>
-                        <FormControl>
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {localCampaigns.map((c: any) => (
-                            <SelectItem key={c.id} value={c.id}>
-                              {c.name}
+                    <FormLabel>Safra</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || undefined}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a safra..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {seasons.length === 0 ? (
+                          <div className="px-3 py-2 text-sm text-muted-foreground">
+                            Nenhuma safra cadastrada
+                          </div>
+                        ) : (
+                          seasons.map((s) => (
+                            <SelectItem key={s.id} value={s.id}>
+                              {seasonLabel(s)}
                             </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        type="button"
-                        onClick={() => setIsNewCampaignOpen(true)}
-                        title="Nova Campanha"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -207,7 +300,7 @@ export function ImportSoilWizard({
                   <FormItem>
                     <FormLabel>Laboratório</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} placeholder="Ex: IBRA" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -266,12 +359,13 @@ export function ImportSoilWizard({
                 <FormLabel>Arquivo Excel (.xlsx, .xlsm)</FormLabel>
                 <Input
                   type="file"
-                  accept=".xlsx, .xlsm"
+                  accept=".xlsx,.xlsm"
                   onChange={(e) => setFile(e.target.files?.[0] || null)}
                 />
               </FormItem>
               <Button type="submit" className="w-full" disabled={isUploading}>
-                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Continuar
+                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Continuar
               </Button>
             </form>
           </Form>
@@ -295,7 +389,7 @@ export function ImportSoilWizard({
                 <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                 <div>
                   <span className="font-semibold block mb-1">
-                    Colunas Desconhecidas (ignoradas):
+                    Colunas desconhecidas (ignoradas):
                   </span>
                   {previewData.validationSummary.unknownColumns.join(', ')}
                 </div>
@@ -304,24 +398,20 @@ export function ImportSoilWizard({
 
             {(previewData.validationSummary.detectedRecommendationSheets ?? []).length > 0 && (
               <div className="bg-blue-50 text-blue-800 p-3 rounded-md text-sm">
-                <span className="font-semibold block mb-1">
-                  Abas detectadas (não importadas agora):
-                </span>
+                <span className="font-semibold block mb-1">Abas detectadas (não importadas):</span>
                 <p>
                   Seu arquivo contém{' '}
                   <strong>
                     {previewData.validationSummary.detectedRecommendationSheets.join(', ')}
                   </strong>
-                  . Essas abas de recomendação serão importáveis na aba Recomendações da área.
+                  . Essas abas serão importáveis na aba Recomendações.
                 </p>
               </div>
             )}
 
             {hasErrors ? (
               <div className="bg-destructive/10 text-destructive p-3 rounded-md text-sm">
-                <span className="font-semibold block mb-2">
-                  Foram encontrados erros que impedem a importação:
-                </span>
+                <span className="font-semibold block mb-2">Erros que impedem a importação:</span>
                 <ul className="list-disc pl-4 space-y-1">
                   {previewData.validationSummary.errors.map((e: string, i: number) => (
                     <li key={i}>{e}</li>
@@ -348,23 +438,13 @@ export function ImportSoilWizard({
                 onClick={handleConfirm}
                 disabled={hasErrors || isUploading}
               >
-                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Confirmar
-                Importação
+                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Confirmar Importação
               </Button>
             </div>
           </div>
         )}
       </SheetContent>
-
-      <NewCampaignModal
-        open={isNewCampaignOpen}
-        onOpenChange={setIsNewCampaignOpen}
-        onSuccess={(newCamp) => {
-          setLocalCampaigns((prev) => [...prev, newCamp])
-          form.setValue('campaign_id', newCamp.id)
-          if (onCampaignCreated) onCampaignCreated(newCamp.id)
-        }}
-      />
     </Sheet>
   )
 }

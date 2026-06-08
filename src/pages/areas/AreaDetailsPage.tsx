@@ -35,6 +35,8 @@ type AreaDetails = Tables<'areas'> & {
   farms: { name: string; id: string; producers: { name: string } | null } | null
 }
 
+type Season = { id: string; season_year: string; crop: string | null }
+
 const DEPTH_OPTIONS = [
   { label: '0–20 cm', from: 0, to: 20 },
   { label: '20–40 cm', from: 20, to: 40 },
@@ -124,8 +126,10 @@ export default function AreaDetailsPage() {
   const [loading, setLoading] = useState(true)
   const [boundary, setBoundary] = useState<any>(null)
 
-  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([])
-  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
+  const [seasons, setSeasons] = useState<Season[]>([])
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string>('')
+  const [resolvedCampaignId, setResolvedCampaignId] = useState<string>('')
+
   const [attributes, setAttributes] = useState<{ code: string; name: string }[]>([])
   const [selectedAttribute, setSelectedAttribute] = useState<string>('')
   const [selectedDepth, setSelectedDepth] = useState<string>('0-20')
@@ -139,7 +143,7 @@ export default function AreaDetailsPage() {
     if (!id) return
     async function loadAll() {
       try {
-        const [areaRes, mapRes, campRes, attrRes] = await Promise.all([
+        const [areaRes, mapRes, seasonRes, attrRes] = await Promise.all([
           supabase
             .from('areas')
             .select('*, farms(id, name, producers(name))')
@@ -147,10 +151,10 @@ export default function AreaDetailsPage() {
             .single(),
           supabase.rpc('get_area_map_data', { p_area_id: id }),
           supabase
-            .from('sampling_campaigns')
-            .select('id, name, area_seasons!inner(area_id)')
-            .eq('area_seasons.area_id', id)
-            .order('created_at', { ascending: false }),
+            .from('area_seasons')
+            .select('id, season_year, crop')
+            .eq('area_id', id)
+            .order('season_year', { ascending: false }),
           supabase
             .from('lab_attributes')
             .select('code, name')
@@ -160,9 +164,9 @@ export default function AreaDetailsPage() {
 
         if (!areaRes.error && areaRes.data) setArea(areaRes.data as any)
         if (!mapRes.error && mapRes.data) setBoundary((mapRes.data as any).boundary)
-        if (!campRes.error && campRes.data) {
-          setCampaigns(campRes.data)
-          if (campRes.data.length > 0) setSelectedCampaignId(campRes.data[0].id)
+        if (!seasonRes.error && seasonRes.data) {
+          setSeasons(seasonRes.data)
+          if (seasonRes.data.length > 0) setSelectedSeasonId(seasonRes.data[0].id)
         }
         if (!attrRes.error && attrRes.data) {
           setAttributes(attrRes.data)
@@ -177,8 +181,23 @@ export default function AreaDetailsPage() {
     loadAll()
   }, [id])
 
+  // Resolve campaign for selected season
   useEffect(() => {
-    if (!selectedCampaignId || !selectedAttribute || !id) {
+    if (!selectedSeasonId) {
+      setResolvedCampaignId('')
+      return
+    }
+    supabase
+      .from('sampling_campaigns')
+      .select('id')
+      .eq('area_season_id', selectedSeasonId)
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => setResolvedCampaignId(data?.id || ''))
+  }, [selectedSeasonId])
+
+  useEffect(() => {
+    if (!resolvedCampaignId || !selectedAttribute || !id) {
       setRawPoints([])
       return
     }
@@ -188,7 +207,7 @@ export default function AreaDetailsPage() {
     setPointsLoading(true)
     supabase
       .rpc('get_campaign_points_with_attribute', {
-        p_campaign_id: selectedCampaignId,
+        p_campaign_id: resolvedCampaignId,
         p_attribute_code: selectedAttribute,
         p_depth_from: depthConfig.from,
         p_depth_to: depthConfig.to,
@@ -198,7 +217,7 @@ export default function AreaDetailsPage() {
         else setRawPoints([])
         setPointsLoading(false)
       })
-  }, [selectedCampaignId, selectedAttribute, selectedDepth, id])
+  }, [resolvedCampaignId, selectedAttribute, selectedDepth, id])
 
   const coloredPoints = useMemo<SoilPointData[]>(() => {
     if (!rawPoints.length) return []
@@ -219,7 +238,13 @@ export default function AreaDetailsPage() {
 
   const selectedAttrName =
     attributes.find((a) => a.code === selectedAttribute)?.name || selectedAttribute
-  const selectedCampaignName = campaigns.find((c) => c.id === selectedCampaignId)?.name || ''
+
+  const selectedSeason = seasons.find((s) => s.id === selectedSeasonId)
+  const selectedSeasonLabel = selectedSeason
+    ? selectedSeason.crop
+      ? `${selectedSeason.season_year} (${selectedSeason.crop})`
+      : selectedSeason.season_year
+    : ''
 
   if (loading) {
     return (
@@ -234,7 +259,7 @@ export default function AreaDetailsPage() {
 
   if (!area) return <div className="p-8 text-muted-foreground">Área não encontrada.</div>
 
-  const area_ha = area.calculated_area_ha || area.declared_area_ha
+  const area_ha = area.calculated_area_ha || (area as any).declared_area_ha
 
   return (
     <div className="space-y-6 animate-fade-in-up pb-10">
@@ -293,12 +318,11 @@ export default function AreaDetailsPage() {
             showLegend
           />
 
-          {/* Map overlays */}
           <div className="absolute top-3 right-3 z-[1000] flex flex-col items-end gap-1.5 pointer-events-none">
-            {selectedCampaignName && (
+            {selectedSeasonLabel && (
               <div className="bg-background/80 backdrop-blur border border-border/50 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
                 <Activity className="h-3 w-3 text-primary" />
-                <span className="font-mono text-[11px]">{selectedCampaignName}</span>
+                <span className="font-mono text-[11px]">{selectedSeasonLabel}</span>
               </div>
             )}
             {coloredPoints.length > 0 && (
@@ -316,7 +340,6 @@ export default function AreaDetailsPage() {
             )}
           </div>
 
-          {/* No boundary state */}
           {!boundary && (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-card/90 gap-3 z-[500]">
               <MapPin className="h-10 w-10 opacity-20" />
@@ -332,27 +355,26 @@ export default function AreaDetailsPage() {
 
         {/* Right panel */}
         <div className="lg:w-80 xl:w-96 shrink-0 flex flex-col gap-4">
-          {/* Controls */}
           <div className="rounded-xl border border-border/60 bg-card p-4 space-y-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Visualização
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground">Campanha</label>
-              {campaigns.length === 0 ? (
+              <label className="text-xs text-muted-foreground">Safra</label>
+              {seasons.length === 0 ? (
                 <p className="text-xs text-muted-foreground/60 py-1">
-                  Nenhuma campanha — importe um shapefile primeiro.
+                  Nenhuma safra — importe um shapefile primeiro.
                 </p>
               ) : (
-                <Select value={selectedCampaignId} onValueChange={setSelectedCampaignId}>
+                <Select value={selectedSeasonId} onValueChange={setSelectedSeasonId}>
                   <SelectTrigger className="h-8 text-xs font-mono">
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {campaigns.map((c) => (
-                      <SelectItem key={c.id} value={c.id} className="text-xs font-mono">
-                        {c.name}
+                    {seasons.map((s) => (
+                      <SelectItem key={s.id} value={s.id} className="text-xs font-mono">
+                        {s.crop ? `${s.season_year} (${s.crop})` : s.season_year}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -401,7 +423,6 @@ export default function AreaDetailsPage() {
             </div>
           </div>
 
-          {/* Stats */}
           {stats ? (
             <div className="rounded-xl border border-border/60 bg-card p-4 space-y-3">
               <div className="flex items-center justify-between">
@@ -439,7 +460,7 @@ export default function AreaDetailsPage() {
 
               <DistributionBar points={coloredPoints} />
             </div>
-          ) : campaigns.length > 0 && selectedCampaignId ? (
+          ) : seasons.length > 0 && resolvedCampaignId ? (
             <div className="rounded-xl border border-dashed border-border/40 bg-card/50 p-4 flex flex-col items-center gap-2 text-muted-foreground">
               <FlaskConical className="h-7 w-7 opacity-20" />
               <p className="text-xs text-center">Sem dados de solo para este atributo.</p>
@@ -456,18 +477,11 @@ export default function AreaDetailsPage() {
             </div>
           ) : null}
 
-          {/* Area meta */}
           <div className="rounded-xl border border-border/60 bg-card p-4 space-y-2">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Área
             </p>
             <div className="space-y-1.5 text-xs">
-              {area.declared_area_ha && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Declarada</span>
-                  <span className="font-mono">{Number(area.declared_area_ha).toFixed(2)} ha</span>
-                </div>
-              )}
               {area.calculated_area_ha && (
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Calculada</span>
@@ -520,7 +534,6 @@ export default function AreaDetailsPage() {
         open={geoWizardOpen}
         onOpenChange={setGeoWizardOpen}
         area={area}
-        campaigns={campaigns}
         onSuccess={() => {
           setGeoWizardOpen(false)
           supabase.rpc('get_area_map_data', { p_area_id: id }).then(({ data }) => {
@@ -532,12 +545,8 @@ export default function AreaDetailsPage() {
       <ImportSoilWizard
         open={soilWizardOpen}
         onOpenChange={setSoilWizardOpen}
-        campaigns={campaigns}
+        areaId={id!}
         onSuccess={() => setSoilWizardOpen(false)}
-        onCampaignCreated={(newId) => {
-          setCampaigns((prev) => [{ id: newId, name: 'Nova campanha' }, ...prev])
-          setSelectedCampaignId(newId)
-        }}
       />
     </div>
   )
