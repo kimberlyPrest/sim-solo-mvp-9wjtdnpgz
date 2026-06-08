@@ -501,7 +501,7 @@ export default function ProducerDetailsPage() {
             </div>
           )}
 
-          <div className="pointer-events-none absolute left-4 top-4 z-30 max-w-sm rounded-lg border border-border/70 bg-background/85 p-4 backdrop-blur">
+          <div className="pointer-events-none absolute left-16 right-4 top-4 z-30 rounded-lg border border-border/70 bg-background/85 p-4 backdrop-blur sm:left-auto sm:max-w-sm">
             <div className="flex items-center gap-2">
               <span className="h-2.5 w-2.5 rounded-full bg-primary shadow-[0_0_10px_hsl(var(--primary))]" />
               <p className="text-base font-semibold text-primary">Monitoramento Georreferenciado</p>
