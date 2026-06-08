@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Archive, ArrowLeft, Tractor, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -27,16 +27,21 @@ import {
 } from '@/components/ui/table'
 import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
 import { deleteProducerCascade } from '@/lib/entity-deletion'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { FarmForm, FarmFormData } from '../farms/FarmForm'
 
 export default function ProducerDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { organization, hasRole } = useAuth()
   const { toast } = useToast()
   const [producer, setProducer] = useState<Tables<'producers'> | null>(null)
   const [farms, setFarms] = useState<Tables<'farms'>[]>([])
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [farmSheetOpen, setFarmSheetOpen] = useState(false)
+  const [isFarmSubmitting, setIsFarmSubmitting] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
 
@@ -78,6 +83,12 @@ export default function ProducerDetailsPage() {
     fetchData()
   }, [id, organization])
 
+  useEffect(() => {
+    if (loading || !producer || !canEdit || searchParams.get('setup') !== 'farm') return
+    setFarmSheetOpen(true)
+    setSearchParams({}, { replace: true })
+  }, [canEdit, loading, producer, searchParams, setSearchParams])
+
   const handleUpdate = async (data: ProducerFormData) => {
     setIsSubmitting(true)
     const { error } = await supabase.from('producers').update(data).eq('id', id)
@@ -87,6 +98,35 @@ export default function ProducerDetailsPage() {
     } else {
       toast({ title: 'Sucesso', description: 'Produtor atualizado com sucesso.' })
       fetchData()
+    }
+  }
+
+  const handleCreateFarm = async (data: FarmFormData) => {
+    if (!organization || !producer) return
+    setIsFarmSubmitting(true)
+    try {
+      const { data: createdFarm, error } = await supabase
+        .from('farms')
+        .insert([
+          {
+            ...data,
+            producer_id: producer.id,
+            organization_id: organization.id,
+            status: 'active',
+          },
+        ])
+        .select('id')
+        .single()
+
+      if (error) throw error
+      toast({ title: 'Sucesso', description: 'Fazenda criada com sucesso.' })
+      setFarmSheetOpen(false)
+      if (createdFarm?.id) navigate(`/fazendas/${createdFarm.id}?setup=area`)
+      else fetchData()
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsFarmSubmitting(false)
     }
   }
 
@@ -200,10 +240,8 @@ export default function ProducerDetailsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Fazendas Vinculadas</CardTitle>
               {canEdit && (
-                <Button size="sm" variant="secondary" asChild>
-                  <Link to="/fazendas">
-                    <Plus className="mr-2 h-4 w-4" /> Nova Fazenda
-                  </Link>
+                <Button size="sm" variant="secondary" onClick={() => setFarmSheetOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" /> Nova Fazenda
                 </Button>
               )}
             </CardHeader>
@@ -211,7 +249,12 @@ export default function ProducerDetailsPage() {
               {farms.length === 0 ? (
                 <div className="py-8 text-center text-muted-foreground flex flex-col items-center">
                   <Tractor className="h-8 w-8 mb-2 opacity-20" />
-                  Nenhuma fazenda vinculada a este produtor.
+                  <span>Nenhuma fazenda vinculada a este produtor.</span>
+                  {canEdit && (
+                    <Button size="sm" className="mt-4" onClick={() => setFarmSheetOpen(true)}>
+                      <Plus className="mr-2 h-4 w-4" /> Criar primeira fazenda
+                    </Button>
+                  )}
                 </div>
               ) : (
                 <Table>
@@ -244,6 +287,21 @@ export default function ProducerDetailsPage() {
           </Card>
         </div>
       </div>
+
+      <Sheet open={farmSheetOpen} onOpenChange={setFarmSheetOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader className="mb-6">
+            <SheetTitle>Nova fazenda para {producer.name}</SheetTitle>
+          </SheetHeader>
+          <FarmForm
+            initialData={{ producer_id: producer.id }}
+            producers={[{ id: producer.id, name: producer.name }]}
+            onSubmit={handleCreateFarm}
+            isSubmitting={isFarmSubmitting}
+            onCancel={() => setFarmSheetOpen(false)}
+          />
+        </SheetContent>
+      </Sheet>
 
       <DeleteEntityDialog
         open={deleteOpen}

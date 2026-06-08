@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Search, Trash2, User } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ArrowRight, Crosshair, Plus, Search, Tractor, Trash2, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -23,6 +23,7 @@ import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
 import { deleteProducerCascade } from '@/lib/entity-deletion'
 
 export default function ProducersPage() {
+  const navigate = useNavigate()
   const { organization, hasRole } = useAuth()
   const [producers, setProducers] = useState<Tables<'producers'>[]>([])
   const [loading, setLoading] = useState(true)
@@ -64,13 +65,17 @@ export default function ProducersPage() {
   const handleCreate = async (data: ProducerFormData) => {
     if (!organization) return
     setIsSubmitting(true)
-    const { error } = await supabase.from('producers').insert([
-      {
-        ...data,
-        organization_id: organization.id,
-        status: 'active',
-      },
-    ])
+    const { data: createdProducer, error } = await supabase
+      .from('producers')
+      .insert([
+        {
+          ...data,
+          organization_id: organization.id,
+          status: 'active',
+        },
+      ])
+      .select('id')
+      .single()
     setIsSubmitting(false)
 
     if (error) {
@@ -78,7 +83,8 @@ export default function ProducersPage() {
     } else {
       toast({ title: 'Sucesso', description: 'Produtor criado com sucesso.' })
       setIsSheetOpen(false)
-      fetchProducers()
+      if (createdProducer?.id) navigate(`/produtores/${createdProducer.id}?setup=farm`)
+      else fetchProducers()
     }
   }
 
@@ -129,6 +135,30 @@ export default function ProducersPage() {
             </SheetContent>
           </Sheet>
         )}
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Fluxo de implantação</p>
+            <p className="text-xs text-muted-foreground">
+              Cadastre o produtor, crie a fazenda vinculada e siga para o primeiro talhão.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <User className="h-3.5 w-3.5" /> Produtor
+            </span>
+            <ArrowRight className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <Tractor className="h-3.5 w-3.5" /> Fazenda
+            </span>
+            <ArrowRight className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <Crosshair className="h-3.5 w-3.5" /> Talhão
+            </span>
+          </div>
+        </div>
       </div>
 
       <Card>
