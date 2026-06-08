@@ -4,6 +4,7 @@ import {
   ArrowLeft,
   Activity,
   ClipboardList,
+  ArrowLeftRight,
   MapPin,
   Upload,
   Crosshair,
@@ -28,6 +29,7 @@ import { Tables } from '@/lib/supabase/types'
 import { SOIL_ATTRIBUTES } from '@/lib/soil-attributes'
 import { GeoMap, classifyPoints, type SoilPointData } from '@/components/map/GeoMap'
 import { AreaHistoricalAnalysisTab } from './tabs/AreaHistoricalAnalysisTab'
+import { AreaComparisonTab } from './tabs/AreaComparisonTab'
 import { AreaRecommendationsTab } from './tabs/AreaRecommendationsTab'
 import { GeographicImportWizard } from '@/features/areas/GeographicImportWizard'
 import { ImportSoilWizard } from '@/features/soil/ImportSoilWizard'
@@ -532,6 +534,12 @@ export default function AreaDetailsPage() {
                 <Activity className="h-3.5 w-3.5" /> Histórico
               </TabsTrigger>
               <TabsTrigger
+                value="compare"
+                className="text-xs px-3 py-2 data-[state=active]:bg-muted data-[state=active]:text-foreground rounded-md gap-1.5"
+              >
+                <ArrowLeftRight className="h-3.5 w-3.5" /> Comparativo
+              </TabsTrigger>
+              <TabsTrigger
                 value="recommendations"
                 className="text-xs px-3 py-2 data-[state=active]:bg-muted data-[state=active]:text-foreground rounded-md gap-1.5"
               >
@@ -543,6 +551,9 @@ export default function AreaDetailsPage() {
           <div className="p-4 sm:p-6">
             <TabsContent value="history" className="mt-0">
               <AreaHistoricalAnalysisTab areaId={id!} />
+            </TabsContent>
+            <TabsContent value="compare" className="mt-0">
+              <AreaComparisonTab areaId={id!} />
             </TabsContent>
             <TabsContent value="recommendations" className="mt-0">
               <AreaRecommendationsTab areaId={id!} canEdit={canEdit} />
