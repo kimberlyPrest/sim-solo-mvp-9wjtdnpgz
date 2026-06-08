@@ -140,6 +140,7 @@ export default function AreaDetailsPage() {
   const [selectedAttribute, setSelectedAttribute] = useState<string>('')
   const [selectedDepth, setSelectedDepth] = useState<string>('0-20')
   const [pointsLoading, setPointsLoading] = useState(false)
+  const [soilRefreshKey, setSoilRefreshKey] = useState(0)
 
   const [geoWizardOpen, setGeoWizardOpen] = useState(false)
   const [soilWizardOpen, setSoilWizardOpen] = useState(false)
@@ -221,7 +222,7 @@ export default function AreaDetailsPage() {
         else setPointsForMap(basePoints)
       })
       .finally(() => setPointsLoading(false))
-  }, [id, selectedSeasonId, selectedAttribute, selectedDepth, basePoints])
+  }, [id, selectedSeasonId, selectedAttribute, selectedDepth, basePoints, soilRefreshKey])
 
   const coloredPoints = useMemo<SoilPointData[]>(() => {
     if (!pointsForMap.length) return []
@@ -572,7 +573,11 @@ export default function AreaDetailsPage() {
         open={soilWizardOpen}
         onOpenChange={setSoilWizardOpen}
         areaId={id!}
-        onSuccess={() => setSoilWizardOpen(false)}
+        onSuccess={(seasonId) => {
+          setSoilWizardOpen(false)
+          if (seasonId) setSelectedSeasonId(seasonId)
+          setSoilRefreshKey((key) => key + 1)
+        }}
       />
 
       <DeleteEntityDialog

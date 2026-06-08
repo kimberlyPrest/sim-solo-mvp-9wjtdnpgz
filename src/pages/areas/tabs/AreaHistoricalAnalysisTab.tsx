@@ -20,12 +20,52 @@ import {
 } from '@/components/ui/table'
 import { AlertCircle } from 'lucide-react'
 
-type ChartRow = { campaign: string; average: number; date: string }
+type ChartRow = { season: string; average: number; date: string }
+type SeasonRow = {
+  id: string
+  season_year: string
+  crop: string | null
+  sample_date?: string | null
+  result_date?: string | null
+}
 
 const DEPTHS = [
-  { label: '0 - 20 cm', from: 0, to: 20 },
-  { label: '20 - 40 cm', from: 20, to: 40 },
+  { label: '0 - 20 cm', key: '0-20', layer: '0_20' },
+  { label: '20 - 40 cm', key: '20-40', layer: '20_40' },
 ]
+
+const ATTRIBUTE_COLUMNS: Record<string, string> = {
+  PH_H2O: 'ph_h2o',
+  PH_CACL2: 'ph_cacl2',
+  P_REM: 'p_rem',
+  MO: 'mo',
+  P_MELICH: 'p_melich',
+  P_RES: 'p_res',
+  K: 'k',
+  K_RES: 'k_res',
+  S: 's',
+  CA: 'ca',
+  MG: 'mg',
+  AL: 'al',
+  H_AL: 'h_al',
+  SB: 'sb',
+  T: 't_ctc',
+  T_EFETIVA: 't_efetiva',
+  V: 'v_pct',
+  M: 'm_pct',
+  B: 'b',
+  CU: 'cu',
+  FE: 'fe',
+  MN: 'mn',
+  ZN: 'zn',
+  AREIA: 'areia',
+  SILTE: 'silte',
+  ARGILA: 'argila',
+}
+
+function seasonLabel(season: SeasonRow) {
+  return season.crop ? `${season.season_year} (${season.crop})` : season.season_year
+}
 
 export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
   const [attributes, setAttributes] = useState<{ code: string; name: string }[]>([])
@@ -51,71 +91,58 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
   useEffect(() => {
     async function loadData() {
       if (!selectedAttribute || !selectedDepth || !areaId) return
-      const depthConfig = DEPTHS.find((d) => `${d.from}-${d.to}` === selectedDepth)
-      if (!depthConfig) return
+      const column = ATTRIBUTE_COLUMNS[selectedAttribute]
+      const depthConfig = DEPTHS.find((d) => d.key === selectedDepth)
+      if (!column || !depthConfig) {
+        setChartData([])
+        return
+      }
 
       setLoading(true)
       try {
-        // Step 1: campaigns for this area (1-level join — works in PostgREST)
-        const { data: campaigns, error: campErr } = await supabase
-          .from('sampling_campaigns')
-          .select('id, name, sample_date, area_seasons!inner(area_id)')
-          .eq('area_seasons.area_id', areaId)
-        if (campErr) throw campErr
-        if (!campaigns?.length) {
+        const { data: seasons, error: seasonsError } = await (supabase.from as any)('area_seasons')
+          .select('id, season_year, crop, sample_date, result_date')
+          .eq('area_id', areaId)
+          .order('season_year', { ascending: true })
+
+        if (seasonsError) throw seasonsError
+        if (!seasons?.length) {
           setChartData([])
           return
         }
 
-        // Step 2: sampling point IDs for those campaigns (direct .in filter)
-        const campaignIds = campaigns.map((c) => c.id)
-        const { data: points, error: ptErr } = await supabase
-          .from('sampling_points')
-          .select('id, campaign_id')
-          .in('campaign_id', campaignIds)
-        if (ptErr) throw ptErr
-        if (!points?.length) {
-          setChartData([])
-          return
-        }
+        const seasonIds = seasons.map((season: SeasonRow) => season.id)
+        const { data: measurements, error: measurementsError } = await (supabase.from as any)(
+          'soil_measurements',
+        )
+          .select(`area_season_id, ${column}`)
+          .in('area_season_id', seasonIds)
+          .eq('depth_layer', depthConfig.layer)
 
-        // Step 3: measurements filtered by point IDs + depth (1-level join filters)
-        const { data: measurements, error: measErr } = await supabase
-          .from('lab_measurements')
-          .select('numeric_value, samples!inner(depth_from_cm, depth_to_cm, sampling_point_id)')
-          .eq('attribute_code', selectedAttribute)
-          .eq('samples.depth_from_cm', depthConfig.from)
-          .eq('samples.depth_to_cm', depthConfig.to)
-          .in(
-            'samples.sampling_point_id',
-            points.map((p) => p.id),
-          )
-        if (measErr) throw measErr
+        if (measurementsError) throw measurementsError
 
-        // Aggregate by campaign
-        const pointToCampaignId = Object.fromEntries(points.map((p) => [p.id, p.campaign_id]))
-        const campaignById = Object.fromEntries(campaigns.map((c) => [c.id, c]))
-        const acc: Record<string, { name: string; total: number; count: number; date: string }> = {}
-
-        measurements?.forEach((m) => {
-          const sample = m.samples as any
-          const cid = pointToCampaignId[sample.sampling_point_id]
-          const camp = campaignById[cid]
-          if (!camp) return
-          if (!acc[cid])
-            acc[cid] = { name: camp.name, total: 0, count: 0, date: camp.sample_date || '' }
-          acc[cid].total += Number(m.numeric_value) || 0
-          acc[cid].count += 1
+        const acc: Record<string, { total: number; count: number }> = {}
+        ;(measurements || []).forEach((measurement: any) => {
+          const value = measurement[column]
+          if (value === null || value === undefined || Number.isNaN(Number(value))) return
+          if (!acc[measurement.area_season_id])
+            acc[measurement.area_season_id] = { total: 0, count: 0 }
+          acc[measurement.area_season_id].total += Number(value)
+          acc[measurement.area_season_id].count += 1
         })
 
         setChartData(
-          Object.values(acc)
-            .map((c) => ({
-              campaign: c.name,
-              average: Number((c.total / c.count).toFixed(2)),
-              date: c.date,
-            }))
-            .sort((a, b) => a.date.localeCompare(b.date)),
+          seasons
+            .map((season: SeasonRow) => {
+              const values = acc[season.id]
+              if (!values?.count) return null
+              return {
+                season: seasonLabel(season),
+                average: Number((values.total / values.count).toFixed(2)),
+                date: season.sample_date || season.result_date || season.season_year,
+              }
+            })
+            .filter(Boolean) as ChartRow[],
         )
       } catch (err) {
         console.error(err)
@@ -153,7 +180,7 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
             </SelectTrigger>
             <SelectContent>
               {DEPTHS.map((d) => (
-                <SelectItem key={`${d.from}-${d.to}`} value={`${d.from}-${d.to}`}>
+                <SelectItem key={d.key} value={d.key}>
                   {d.label}
                 </SelectItem>
               ))}
@@ -176,7 +203,7 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Evolução Média ({selectedAttribute})</CardTitle>
-              <CardDescription>Média dos pontos por amostragem</CardDescription>
+              <CardDescription>Média dos pontos por safra</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -189,7 +216,7 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
                       margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
                     >
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis dataKey="campaign" tickLine={false} axisLine={false} tickMargin={10} />
+                      <XAxis dataKey="season" tickLine={false} axisLine={false} tickMargin={10} />
                       <YAxis tickLine={false} axisLine={false} tickMargin={10} />
                       <ChartTooltip content={<ChartTooltipContent />} />
                       <Line
@@ -209,20 +236,20 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Valores por Amostragem</CardTitle>
+              <CardTitle>Valores por Safra</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Amostragem</TableHead>
+                    <TableHead>Safra</TableHead>
                     <TableHead className="text-right">Média</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {chartData.map((row, i) => (
                     <TableRow key={i}>
-                      <TableCell className="font-medium">{row.campaign}</TableCell>
+                      <TableCell className="font-medium">{row.season}</TableCell>
                       <TableCell className="text-right">{row.average}</TableCell>
                     </TableRow>
                   ))}

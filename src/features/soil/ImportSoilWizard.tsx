@@ -56,7 +56,7 @@ export function ImportSoilWizard({
   open: boolean
   onOpenChange: (open: boolean) => void
   areaId: string
-  onSuccess?: () => void
+  onSuccess?: (seasonId?: string) => void
 }) {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
@@ -190,7 +190,7 @@ export function ImportSoilWizard({
       toast({ title: 'Sucesso', description: 'Importação concluída.' })
       onOpenChange(false)
       window.dispatchEvent(new CustomEvent('refresh-soil-analyses'))
-      if (onSuccess) onSuccess()
+      if (onSuccess) onSuccess(payload!.areaSeasonId)
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {
