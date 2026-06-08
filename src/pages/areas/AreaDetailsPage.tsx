@@ -4,7 +4,6 @@ import {
   ArrowLeft,
   Activity,
   ClipboardList,
-  FileSpreadsheet,
   MapPin,
   Upload,
   Crosshair,
@@ -28,7 +27,6 @@ import { Tables } from '@/lib/supabase/types'
 import { GeoMap, classifyPoints, type SoilPointData } from '@/components/map/GeoMap'
 import { AreaHistoricalAnalysisTab } from './tabs/AreaHistoricalAnalysisTab'
 import { AreaRecommendationsTab } from './tabs/AreaRecommendationsTab'
-import { AreaImportsTab } from './tabs/AreaImportsTab'
 import { GeographicImportWizard } from '@/features/areas/GeographicImportWizard'
 import { ImportSoilWizard } from '@/features/soil/ImportSoilWizard'
 import { useAuth } from '@/hooks/use-auth'
@@ -504,12 +502,6 @@ export default function AreaDetailsPage() {
               >
                 <ClipboardList className="h-3.5 w-3.5" /> Recomendações
               </TabsTrigger>
-              <TabsTrigger
-                value="imports"
-                className="text-xs px-3 py-2 data-[state=active]:bg-muted data-[state=active]:text-foreground rounded-md gap-1.5"
-              >
-                <FileSpreadsheet className="h-3.5 w-3.5" /> Importações
-              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -519,9 +511,6 @@ export default function AreaDetailsPage() {
             </TabsContent>
             <TabsContent value="recommendations" className="mt-0">
               <AreaRecommendationsTab areaId={id!} canEdit={canEdit} />
-            </TabsContent>
-            <TabsContent value="imports" className="mt-0">
-              <AreaImportsTab areaId={id!} />
             </TabsContent>
           </div>
         </Tabs>
