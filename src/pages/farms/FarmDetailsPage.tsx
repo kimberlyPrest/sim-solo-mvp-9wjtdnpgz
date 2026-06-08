@@ -31,7 +31,7 @@ type FarmAreaData = {
   id: string
   name: string
   calculated_area_ha: number | null
-  declared_area_ha: number | null
+
   boundary: any | null
   point_count: number
   last_sample_date: string | null
@@ -83,7 +83,7 @@ export default function FarmDetailsPage() {
         supabase.from('producers').select('id, name').eq('organization_id', organization.id),
         supabase
           .from('areas')
-          .select('id, name, calculated_area_ha, declared_area_ha')
+          .select('id, name, calculated_area_ha')
           .eq('farm_id', id)
           .order('name'),
       ])
@@ -95,7 +95,7 @@ export default function FarmDetailsPage() {
         id: a.id,
         name: a.name,
         calculated_area_ha: a.calculated_area_ha,
-        declared_area_ha: a.declared_area_ha,
+
         boundary: null,
         point_count: 0,
         last_sample_date: null,
@@ -176,7 +176,7 @@ export default function FarmDetailsPage() {
   )
 
   const totalArea = useMemo(
-    () => areas.reduce((sum, a) => sum + (a.calculated_area_ha || a.declared_area_ha || 0), 0),
+    () => areas.reduce((sum, a) => sum + (a.calculated_area_ha || 0), 0),
     [areas],
   )
 
@@ -354,7 +354,7 @@ export default function FarmDetailsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {areas.map((area, i) => {
               const accentColor = AREA_PALETTE[i % AREA_PALETTE.length]
-              const area_ha = area.calculated_area_ha || area.declared_area_ha
+              const area_ha = area.calculated_area_ha
               return (
                 <Link
                   key={area.id}
