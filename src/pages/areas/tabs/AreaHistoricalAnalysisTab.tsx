@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Select,
@@ -20,110 +20,112 @@ import {
 } from '@/components/ui/table'
 import { AlertCircle } from 'lucide-react'
 
+type ChartRow = { campaign: string; average: number; date: string }
+
+const DEPTHS = [
+  { label: '0 - 20 cm', from: 0, to: 20 },
+  { label: '20 - 40 cm', from: 20, to: 40 },
+]
+
 export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
-  const [attributes, setAttributes] = useState<any[]>([])
+  const [attributes, setAttributes] = useState<{ code: string; name: string }[]>([])
   const [selectedAttribute, setSelectedAttribute] = useState<string>('')
   const [selectedDepth, setSelectedDepth] = useState<string>('0-20')
-  const [data, setData] = useState<any[]>([])
+  const [chartData, setChartData] = useState<ChartRow[]>([])
   const [loading, setLoading] = useState(false)
 
-  const depths = [
-    { label: '0 - 20 cm', from: 0, to: 20 },
-    { label: '20 - 40 cm', from: 20, to: 40 },
-  ]
-
   useEffect(() => {
-    async function loadAttributes() {
-      const { data } = await supabase
-        .from('lab_attributes')
-        .select('code, name')
-        .eq('active', true)
-        .order('display_order')
-      if (data) {
-        setAttributes(data)
-        if (data.length > 0) setSelectedAttribute(data[0].code)
-      }
-    }
-    loadAttributes()
+    supabase
+      .from('lab_attributes')
+      .select('code, name')
+      .eq('active', true)
+      .order('display_order')
+      .then(({ data }) => {
+        if (data) {
+          setAttributes(data)
+          if (data.length > 0) setSelectedAttribute(data[0].code)
+        }
+      })
   }, [])
 
   useEffect(() => {
     async function loadData() {
       if (!selectedAttribute || !selectedDepth || !areaId) return
-      setLoading(true)
-      const depthConfig = depths.find((d) => `${d.from}-${d.to}` === selectedDepth)
-      if (!depthConfig) {
-        setLoading(false)
-        return
-      }
+      const depthConfig = DEPTHS.find((d) => `${d.from}-${d.to}` === selectedDepth)
+      if (!depthConfig) return
 
+      setLoading(true)
       try {
-        const { data: rawData, error } = await supabase
+        // Step 1: campaigns for this area (1-level join — works in PostgREST)
+        const { data: campaigns, error: campErr } = await supabase
+          .from('sampling_campaigns')
+          .select('id, name, sample_date, area_seasons!inner(area_id)')
+          .eq('area_seasons.area_id', areaId)
+        if (campErr) throw campErr
+        if (!campaigns?.length) {
+          setChartData([])
+          return
+        }
+
+        // Step 2: sampling point IDs for those campaigns (direct .in filter)
+        const campaignIds = campaigns.map((c) => c.id)
+        const { data: points, error: ptErr } = await supabase
+          .from('sampling_points')
+          .select('id, campaign_id')
+          .in('campaign_id', campaignIds)
+        if (ptErr) throw ptErr
+        if (!points?.length) {
+          setChartData([])
+          return
+        }
+
+        // Step 3: measurements filtered by point IDs + depth (1-level join filters)
+        const { data: measurements, error: measErr } = await supabase
           .from('lab_measurements')
-          .select(`
-            numeric_value,
-            samples!inner(
-              depth_from_cm,
-              depth_to_cm,
-              sampling_points!inner(
-                code,
-                sampling_campaigns!inner(
-                  name,
-                  sample_date,
-                  area_seasons!inner(
-                    area_id
-                  )
-                )
-              )
-            )
-          `)
+          .select('numeric_value, samples!inner(depth_from_cm, depth_to_cm, sampling_point_id)')
           .eq('attribute_code', selectedAttribute)
           .eq('samples.depth_from_cm', depthConfig.from)
           .eq('samples.depth_to_cm', depthConfig.to)
-          .eq('samples.sampling_points.sampling_campaigns.area_seasons.area_id', areaId)
+          .in(
+            'samples.sampling_point_id',
+            points.map((p) => p.id),
+          )
+        if (measErr) throw measErr
 
-        if (error) throw error
-        setData(rawData || [])
+        // Aggregate by campaign
+        const pointToCampaignId = Object.fromEntries(points.map((p) => [p.id, p.campaign_id]))
+        const campaignById = Object.fromEntries(campaigns.map((c) => [c.id, c]))
+        const acc: Record<string, { name: string; total: number; count: number; date: string }> = {}
+
+        measurements?.forEach((m) => {
+          const sample = m.samples as any
+          const cid = pointToCampaignId[sample.sampling_point_id]
+          const camp = campaignById[cid]
+          if (!camp) return
+          if (!acc[cid])
+            acc[cid] = { name: camp.name, total: 0, count: 0, date: camp.sample_date || '' }
+          acc[cid].total += Number(m.numeric_value) || 0
+          acc[cid].count += 1
+        })
+
+        setChartData(
+          Object.values(acc)
+            .map((c) => ({
+              campaign: c.name,
+              average: Number((c.total / c.count).toFixed(2)),
+              date: c.date,
+            }))
+            .sort((a, b) => a.date.localeCompare(b.date)),
+        )
       } catch (err) {
         console.error(err)
+        setChartData([])
       } finally {
         setLoading(false)
       }
     }
     loadData()
   }, [areaId, selectedAttribute, selectedDepth])
-
-  const chartData = useMemo(() => {
-    if (!data.length) return []
-
-    const byCampaign: Record<string, { name: string; total: number; count: number; date: string }> =
-      {}
-
-    data.forEach((item) => {
-      const campaign = item.samples.sampling_points.sampling_campaigns
-      const campaignName = campaign.name
-      const val = item.numeric_value || 0
-
-      if (!byCampaign[campaignName]) {
-        byCampaign[campaignName] = {
-          name: campaignName,
-          total: 0,
-          count: 0,
-          date: campaign.sample_date || '',
-        }
-      }
-      byCampaign[campaignName].total += val
-      byCampaign[campaignName].count += 1
-    })
-
-    return Object.values(byCampaign)
-      .map((c) => ({
-        campaign: c.name,
-        average: Number((c.total / c.count).toFixed(2)),
-        date: c.date || '',
-      }))
-      .sort((a, b) => a.date.localeCompare(b.date))
-  }, [data])
 
   return (
     <div className="space-y-6">
@@ -150,7 +152,7 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
               <SelectValue placeholder="Selecione..." />
             </SelectTrigger>
             <SelectContent>
-              {depths.map((d) => (
+              {DEPTHS.map((d) => (
                 <SelectItem key={`${d.from}-${d.to}`} value={`${d.from}-${d.to}`}>
                   {d.label}
                 </SelectItem>
@@ -174,7 +176,7 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Evolução Média ({selectedAttribute})</CardTitle>
-              <CardDescription>Média dos pontos por campanha</CardDescription>
+              <CardDescription>Média dos pontos por amostragem</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="h-[300px] w-full">
@@ -207,13 +209,13 @@ export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
 
           <Card>
             <CardHeader>
-              <CardTitle>Valores por Campanha</CardTitle>
+              <CardTitle>Valores por Amostragem</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Campanha</TableHead>
+                    <TableHead>Amostragem</TableHead>
                     <TableHead className="text-right">Média</TableHead>
                   </TableRow>
                 </TableHeader>

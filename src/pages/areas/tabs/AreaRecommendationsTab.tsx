@@ -33,8 +33,10 @@ import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
 
+type Season = { id: string; season_year: string; crop: string | null }
+
 const setSchema = z.object({
-  campaign_id: z.string().min(1, 'Selecione uma campanha'),
+  season_id: z.string().min(1, 'Selecione uma safra'),
   name: z.string().min(3, 'O nome deve ter no mínimo 3 caracteres'),
   kind: z.enum(['corrective', 'nutritional', 'organic']),
   title: z.string().optional(),
@@ -42,48 +44,58 @@ const setSchema = z.object({
 
 export function AreaRecommendationsTab({ areaId, canEdit }: { areaId: string; canEdit: boolean }) {
   const [sets, setSets] = useState<any[]>([])
+  const [seasons, setSeasons] = useState<Season[]>([])
   const [loading, setLoading] = useState(true)
   const [hasError, setHasError] = useState(false)
   const { user, organization } = useAuth()
   const { toast } = useToast()
 
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [campaigns, setCampaigns] = useState<any[]>([])
 
   const form = useForm<z.infer<typeof setSchema>>({
     resolver: zodResolver(setSchema),
-    defaultValues: {
-      campaign_id: '',
-      name: '',
-      kind: 'corrective',
-      title: '',
-    },
+    defaultValues: { season_id: '', name: '', kind: 'corrective', title: '' },
   })
 
   useEffect(() => {
+    loadSeasons()
     loadSets()
-    loadCampaigns()
   }, [areaId])
 
-  async function loadCampaigns() {
-    const { data, error } = await supabase
-      .from('sampling_campaigns')
-      .select('id, name, area_seasons!inner(area_id)')
-      .eq('area_seasons.area_id', areaId)
-    if (!error) setCampaigns(data || [])
+  async function loadSeasons() {
+    const { data } = await supabase
+      .from('area_seasons')
+      .select('id, season_year, crop')
+      .eq('area_id', areaId)
+      .order('season_year', { ascending: false })
+    setSeasons(data || [])
   }
 
   async function loadSets() {
     setLoading(true)
     setHasError(false)
+
+    // Step 1: get campaign IDs for this area (1-level join filter — works in PostgREST)
+    const { data: campData } = await supabase
+      .from('sampling_campaigns')
+      .select('id, area_season_id, area_seasons!inner(area_id)')
+      .eq('area_seasons.area_id', areaId)
+
+    const campaignIds = campData?.map((c) => c.id) || []
+
+    if (!campaignIds.length) {
+      setSets([])
+      setLoading(false)
+      return
+    }
+
+    // Step 2: recommendation_sets for those campaigns (.in filter — no deep join needed)
     const { data, error } = await supabase
       .from('recommendation_sets')
-      .select(`
-        *,
-        profiles!recommendation_sets_created_by_fkey(full_name),
-        sampling_campaigns!inner(name, area_seasons!inner(area_id))
-      `)
-      .eq('sampling_campaigns.area_seasons.area_id', areaId)
+      .select(
+        '*, profiles!recommendation_sets_created_by_fkey(full_name), sampling_campaigns(area_season_id)',
+      )
+      .in('campaign_id', campaignIds)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -98,20 +110,49 @@ export function AreaRecommendationsTab({ areaId, canEdit }: { areaId: string; ca
     setLoading(false)
   }
 
+  async function findOrCreateCampaign(seasonId: string): Promise<string> {
+    const { data: existing } = await supabase
+      .from('sampling_campaigns')
+      .select('id')
+      .eq('area_season_id', seasonId)
+      .limit(1)
+      .maybeSingle()
+
+    if (existing) return existing.id
+
+    const { data: season } = await supabase
+      .from('area_seasons')
+      .select('season_year')
+      .eq('id', seasonId)
+      .single()
+
+    const { data: created, error } = await supabase
+      .from('sampling_campaigns')
+      .insert({
+        organization_id: organization?.id,
+        area_season_id: seasonId,
+        name: `Amostragem ${season?.season_year || ''}`.trim(),
+        source: 'sim' as const,
+      })
+      .select('id')
+      .single()
+
+    if (error) throw new Error(error.message)
+    return created.id
+  }
+
   async function onSubmit(values: z.infer<typeof setSchema>) {
     try {
-      const orgId = organization?.id
-      if (!orgId) throw new Error('Organização não encontrada')
-
+      if (!organization?.id) throw new Error('Organização não encontrada')
+      const campaignId = await findOrCreateCampaign(values.season_id)
       const { error } = await supabase.from('recommendation_sets').insert({
-        organization_id: orgId,
-        campaign_id: values.campaign_id,
+        organization_id: organization.id,
+        campaign_id: campaignId,
         name: values.name,
-        title: values.title,
+        title: values.title || null,
         kind: values.kind,
         created_by: user?.id,
       })
-
       if (error) throw error
       toast({ title: 'Sucesso', description: 'Recomendação criada com sucesso.' })
       setIsDialogOpen(false)
@@ -122,7 +163,14 @@ export function AreaRecommendationsTab({ areaId, canEdit }: { areaId: string; ca
     }
   }
 
-  if (loading) return <div className="animate-pulse h-32 bg-muted/20 rounded-xl"></div>
+  function seasonLabel(set: any) {
+    const seasonId = set.sampling_campaigns?.area_season_id
+    const s = seasons.find((x) => x.id === seasonId)
+    if (!s) return null
+    return s.crop ? `${s.season_year} (${s.crop})` : s.season_year
+  }
+
+  if (loading) return <div className="animate-pulse h-32 bg-muted/20 rounded-xl" />
 
   if (hasError) {
     return (
@@ -151,20 +199,20 @@ export function AreaRecommendationsTab({ areaId, canEdit }: { areaId: string; ca
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                   <FormField
                     control={form.control}
-                    name="campaign_id"
+                    name="season_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Campanha</FormLabel>
+                        <FormLabel>Safra</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
+                              <SelectValue placeholder="Selecione uma safra..." />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {campaigns.map((c) => (
-                              <SelectItem key={c.id} value={c.id}>
-                                {c.name}
+                            {seasons.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>
+                                {s.crop ? `${s.season_year} (${s.crop})` : s.season_year}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -227,26 +275,29 @@ export function AreaRecommendationsTab({ areaId, canEdit }: { areaId: string; ca
             <p className="text-muted-foreground">Nenhuma recomendação registrada para esta área.</p>
           </div>
         ) : (
-          sets.map((set) => (
-            <Card key={set.id}>
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-base">{set.name}</CardTitle>
-                    <CardDescription>
-                      Campanha: {set.sampling_campaigns?.name} • Tipo:{' '}
-                      <span className="capitalize">{set.kind}</span>
-                    </CardDescription>
+          sets.map((set) => {
+            const label = seasonLabel(set)
+            return (
+              <Card key={set.id}>
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="text-base">{set.name}</CardTitle>
+                      <CardDescription>
+                        {label && <>{label} · </>}
+                        Tipo: <span className="capitalize">{set.kind}</span>
+                      </CardDescription>
+                    </div>
+                    {canEdit && (
+                      <Button variant="ghost" size="sm">
+                        <Edit className="w-4 h-4 mr-2" /> Editar Itens
+                      </Button>
+                    )}
                   </div>
-                  {canEdit && (
-                    <Button variant="ghost" size="sm">
-                      <Edit className="w-4 h-4 mr-2" /> Editar Itens
-                    </Button>
-                  )}
-                </div>
-              </CardHeader>
-            </Card>
-          ))
+                </CardHeader>
+              </Card>
+            )
+          })
         )}
       </div>
     </div>

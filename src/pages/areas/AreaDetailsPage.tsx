@@ -259,7 +259,7 @@ export default function AreaDetailsPage() {
 
   if (!area) return <div className="p-8 text-muted-foreground">Área não encontrada.</div>
 
-  const area_ha = area.calculated_area_ha || (area as any).declared_area_ha
+  const area_ha = area.calculated_area_ha || area.declared_area_ha
 
   return (
     <div className="space-y-6 animate-fade-in-up pb-10">
