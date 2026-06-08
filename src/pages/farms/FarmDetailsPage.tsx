@@ -56,7 +56,15 @@ export default function FarmDetailsPage() {
   const { organization, hasRole } = useAuth()
   const { toast } = useToast()
 
-  type FarmWithProducer = Tables<'farms'> & { producers: { name: string } | null }
+  type FarmWithProducer = Tables<'farms'> & {
+    producers: { name: string } | null
+    areas?: {
+      id: string
+      name: string
+      calculated_area_ha: number | null
+      status?: string | null
+    }[]
+  }
   const [farm, setFarm] = useState<FarmWithProducer | null>(null)
   const [areas, setAreas] = useState<FarmAreaData[]>([])
   const [producers, setProducers] = useState<{ id: string; name: string }[]>([])
@@ -73,33 +81,32 @@ export default function FarmDetailsPage() {
     setLoading(true)
     setMapLoading(true)
     try {
-      const [farmRes, prodRes, areasRes] = await Promise.all([
+      const [farmRes, prodRes] = await Promise.all([
         supabase
           .from('farms')
-          .select('*, producers(name)')
+          .select('*, producers(name), areas(id, name, calculated_area_ha, status)')
           .eq('id', id)
           .eq('organization_id', organization.id)
           .single(),
         supabase.from('producers').select('id, name').eq('organization_id', organization.id),
-        supabase
-          .from('areas')
-          .select('id, name, calculated_area_ha')
-          .eq('farm_id', id)
-          .order('name'),
       ])
       if (farmRes.error) throw farmRes.error
-      if (farmRes.data) setFarm(farmRes.data as any)
+      const farmData = farmRes.data as FarmWithProducer
+      if (farmData) setFarm(farmData as any)
       if (prodRes.data) setProducers(prodRes.data)
 
-      const allAreas: FarmAreaData[] = (areasRes.data || []).map((a) => ({
-        id: a.id,
-        name: a.name,
-        calculated_area_ha: a.calculated_area_ha,
+      const allAreas: FarmAreaData[] = (farmData.areas || [])
+        .filter((a) => a.status !== 'archived')
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((a) => ({
+          id: a.id,
+          name: a.name,
+          calculated_area_ha: a.calculated_area_ha,
 
-        boundary: null,
-        point_count: 0,
-        last_sample_date: null,
-      }))
+          boundary: null,
+          point_count: 0,
+          last_sample_date: null,
+        }))
 
       const mapRes = await supabase.rpc('get_farm_map_data', { p_farm_id: id })
       if (!mapRes.error && mapRes.data) {
