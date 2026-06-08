@@ -24,6 +24,7 @@ import { GeoMap } from '@/components/map/GeoMap'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Loader2, AlertTriangle } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { updateFarmLocationFromAreaMajority } from '@/lib/farm-location'
 
 type PreviewData = {
   boundary: any
@@ -35,29 +36,6 @@ type PreviewData = {
     pointsInside: number
     pointsOutside: number
     outsideCodes: string[]
-  }
-}
-
-async function reverseGeocode(boundary: any): Promise<{ city?: string; state?: string } | null> {
-  try {
-    const geom = boundary?.geometry || boundary
-    const ring = geom?.coordinates?.[0]
-    if (!ring?.length) return null
-    const lngSum = ring.reduce((s: number, c: number[]) => s + c[0], 0)
-    const latSum = ring.reduce((s: number, c: number[]) => s + c[1], 0)
-    const lng = lngSum / ring.length
-    const lat = latSum / ring.length
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
-      { headers: { 'Accept-Language': 'pt-BR' } },
-    )
-    const geo = await res.json()
-    const city =
-      geo.address?.municipality || geo.address?.city || geo.address?.town || geo.address?.village
-    const state = geo.address?.state
-    return { city, state }
-  } catch {
-    return null
   }
 }
 
@@ -182,18 +160,7 @@ export function GeographicImportWizard({
 
       const farmId = area.farm_id
       if (farmId) {
-        reverseGeocode(previewData!.boundary).then((geo) => {
-          if (geo?.city || geo?.state) {
-            supabase
-              .from('farms')
-              .update({
-                ...(geo.city && { city: geo.city }),
-                ...(geo.state && { state: geo.state }),
-              })
-              .eq('id', farmId)
-              .then(() => {})
-          }
-        })
+        updateFarmLocationFromAreaMajority(farmId).catch(() => {})
       }
 
       toast({ title: 'Sucesso', description: 'Configuração geográfica concluída.' })

@@ -21,6 +21,7 @@ import { Tables } from '@/lib/supabase/types'
 import { FarmForm, FarmFormData } from './FarmForm'
 import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
 import { deleteFarmCascade } from '@/lib/entity-deletion'
+import { updateFarmLocationFromAreaMajority } from '@/lib/farm-location'
 
 export default function FarmsPage() {
   const { organization, hasRole } = useAuth()
@@ -55,7 +56,28 @@ export default function FarmsPage() {
       ])
       if (farmsRes.error) throw farmsRes.error
       if (prodRes.error) throw prodRes.error
-      if (farmsRes.data) setFarms(farmsRes.data as any)
+      if (farmsRes.data) {
+        const loadedFarms = farmsRes.data as FarmWithProducer[]
+        setFarms(loadedFarms)
+
+        if (canEdit) {
+          loadedFarms.forEach((farm) => {
+            updateFarmLocationFromAreaMajority(farm.id)
+              .then((location) => {
+                if (!location) return
+                if (farm.city === location.city && farm.state === location.state) return
+                setFarms((current) =>
+                  current.map((item) =>
+                    item.id === farm.id
+                      ? { ...item, city: location.city, state: location.state }
+                      : item,
+                  ),
+                )
+              })
+              .catch(() => {})
+          })
+        }
+      }
       if (prodRes.data) setProducers(prodRes.data)
     } catch (err: any) {
       toast({

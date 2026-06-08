@@ -29,6 +29,7 @@ import {
 import { FarmForm, FarmFormData } from './FarmForm'
 import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
 import { deleteFarmCascade } from '@/lib/entity-deletion'
+import { updateFarmLocationFromAreaMajority } from '@/lib/farm-location'
 
 type FarmAreaData = {
   id: string
@@ -129,6 +130,18 @@ export default function FarmDetailsPage() {
             : a,
         )
         setAreas(merged)
+
+        if (canEdit && merged.some((area) => area.boundary)) {
+          updateFarmLocationFromAreaMajority(id)
+            .then((location) => {
+              if (!location) return
+              if (farmData.city === location.city && farmData.state === location.state) return
+              setFarm((current) =>
+                current ? { ...current, city: location.city, state: location.state } : current,
+              )
+            })
+            .catch(() => {})
+        }
       } else {
         setAreas(allAreas)
       }
