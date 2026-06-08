@@ -19,13 +19,6 @@ import { Badge } from '@/components/ui/badge'
 import { Tables } from '@/lib/supabase/types'
 import { GeoMap, type MapFeature } from '@/components/map/GeoMap'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -80,7 +73,7 @@ export default function FarmDetailsPage() {
     setLoading(true)
     setMapLoading(true)
     try {
-      const [farmRes, prodRes] = await Promise.all([
+      const [farmRes, prodRes, areasRes] = await Promise.all([
         supabase
           .from('farms')
           .select('*, producers(name)')
@@ -88,15 +81,44 @@ export default function FarmDetailsPage() {
           .eq('organization_id', organization.id)
           .single(),
         supabase.from('producers').select('id, name').eq('organization_id', organization.id),
+        supabase
+          .from('areas')
+          .select('id, name, calculated_area_ha, declared_area_ha')
+          .eq('farm_id', id)
+          .order('name'),
       ])
       if (farmRes.error) throw farmRes.error
       if (farmRes.data) setFarm(farmRes.data as any)
       if (prodRes.data) setProducers(prodRes.data)
 
+      const allAreas: FarmAreaData[] = (areasRes.data || []).map((a) => ({
+        id: a.id,
+        name: a.name,
+        calculated_area_ha: a.calculated_area_ha,
+        declared_area_ha: a.declared_area_ha,
+        boundary: null,
+        point_count: 0,
+        last_sample_date: null,
+      }))
+
       const mapRes = await supabase.rpc('get_farm_map_data', { p_farm_id: id })
       if (!mapRes.error && mapRes.data) {
-        const areasData = (mapRes.data as any).areas as FarmAreaData[] | null
-        setAreas(areasData || [])
+        const mapAreas = ((mapRes.data as any).areas as FarmAreaData[] | null) || []
+        const mapById = Object.fromEntries(mapAreas.map((a) => [a.id, a]))
+        const merged = allAreas.map((a) =>
+          mapById[a.id]
+            ? {
+                ...a,
+                boundary: mapById[a.id].boundary,
+                point_count: mapById[a.id].point_count,
+                last_sample_date: mapById[a.id].last_sample_date,
+                calculated_area_ha: mapById[a.id].calculated_area_ha ?? a.calculated_area_ha,
+              }
+            : a,
+        )
+        setAreas(merged)
+      } else {
+        setAreas(allAreas)
       }
     } catch (err: any) {
       toast({

@@ -42,6 +42,29 @@ type PreviewData = {
 
 type Season = { id: string; season_year: string; crop: string | null }
 
+async function reverseGeocode(boundary: any): Promise<{ city?: string; state?: string } | null> {
+  try {
+    const geom = boundary?.geometry || boundary
+    const ring = geom?.coordinates?.[0]
+    if (!ring?.length) return null
+    const lngSum = ring.reduce((s: number, c: number[]) => s + c[0], 0)
+    const latSum = ring.reduce((s: number, c: number[]) => s + c[1], 0)
+    const lng = lngSum / ring.length
+    const lat = latSum / ring.length
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+      { headers: { 'Accept-Language': 'pt-BR' } },
+    )
+    const geo = await res.json()
+    const city =
+      geo.address?.municipality || geo.address?.city || geo.address?.town || geo.address?.village
+    const state = geo.address?.state
+    return { city, state }
+  } catch {
+    return null
+  }
+}
+
 export function GeographicImportWizard({
   open,
   onOpenChange,
@@ -50,7 +73,7 @@ export function GeographicImportWizard({
 }: {
   open: boolean
   onOpenChange: (open: boolean) => void
-  area: { id: string }
+  area: { id: string; farm_id?: string }
   onSuccess: () => void
 }) {
   const { organization } = useAuth()
@@ -227,6 +250,24 @@ export function GeographicImportWizard({
       })
 
       if (error) throw error
+
+      // Best-effort: update farm city/state from boundary centroid
+      const farmId = area.farm_id
+      if (farmId && (action === 'initial' || action === 'update_boundary')) {
+        reverseGeocode(previewData!.boundary).then((geo) => {
+          if (geo?.city || geo?.state) {
+            supabase
+              .from('farms')
+              .update({
+                ...(geo.city && { city: geo.city }),
+                ...(geo.state && { state: geo.state }),
+              })
+              .eq('id', farmId)
+              .then(() => {})
+          }
+        })
+      }
+
       toast({ title: 'Sucesso', description: 'Importação concluída com sucesso.' })
       onSuccess()
     } catch (err: any) {
@@ -404,8 +445,12 @@ export function GeographicImportWizard({
               </Alert>
             )}
 
-            <div className="border rounded-md p-1 bg-muted/10 shadow-sm">
-              <GeoMap boundary={previewData.boundary} points={previewData.points} height="350px" />
+            {/* Map container: overflow-hidden + isolate prevent Leaflet layers from escaping the modal */}
+            <div
+              className="relative rounded-md overflow-hidden border border-border/40"
+              style={{ height: 350, isolation: 'isolate' }}
+            >
+              <GeoMap boundary={previewData.boundary} points={previewData.points} height="100%" />
             </div>
 
             <DialogFooter>
