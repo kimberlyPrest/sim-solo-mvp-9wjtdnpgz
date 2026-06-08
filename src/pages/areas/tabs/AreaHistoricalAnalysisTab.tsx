@@ -8,6 +8,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase/client'
+import { SOIL_ATTRIBUTES } from '@/lib/soil-attributes'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts'
 import {
@@ -68,24 +69,14 @@ function seasonLabel(season: SeasonRow) {
 }
 
 export function AreaHistoricalAnalysisTab({ areaId }: { areaId: string }) {
-  const [attributes, setAttributes] = useState<{ code: string; name: string }[]>([])
-  const [selectedAttribute, setSelectedAttribute] = useState<string>('')
+  const attributes = SOIL_ATTRIBUTES
+  const [selectedAttribute, setSelectedAttribute] = useState<string>(SOIL_ATTRIBUTES[0]?.code || '')
   const [selectedDepth, setSelectedDepth] = useState<string>('0-20')
   const [chartData, setChartData] = useState<ChartRow[]>([])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    supabase
-      .from('lab_attributes')
-      .select('code, name')
-      .eq('active', true)
-      .order('display_order')
-      .then(({ data }) => {
-        if (data) {
-          setAttributes(data)
-          if (data.length > 0) setSelectedAttribute(data[0].code)
-        }
-      })
+    setSelectedAttribute((current) => current || SOIL_ATTRIBUTES[0]?.code || '')
   }, [])
 
   useEffect(() => {

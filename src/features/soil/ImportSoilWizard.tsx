@@ -24,6 +24,7 @@ import {
   FormMessage,
 } from '@/components/ui/form'
 import { Loader2, AlertTriangle, Download } from 'lucide-react'
+import { getFirstSoilAttributeCode } from '@/lib/soil-attributes'
 
 const formSchema = z.object({
   season_id: z.string().min(1, 'Safra é obrigatória'),
@@ -56,7 +57,7 @@ export function ImportSoilWizard({
   open: boolean
   onOpenChange: (open: boolean) => void
   areaId: string
-  onSuccess?: (seasonId?: string) => void
+  onSuccess?: (seasonId?: string, attributeCode?: string) => void
 }) {
   const [step, setStep] = useState(1)
   const [file, setFile] = useState<File | null>(null)
@@ -190,7 +191,7 @@ export function ImportSoilWizard({
       toast({ title: 'Sucesso', description: 'Importação concluída.' })
       onOpenChange(false)
       window.dispatchEvent(new CustomEvent('refresh-soil-analyses'))
-      if (onSuccess) onSuccess(payload!.areaSeasonId)
+      if (onSuccess) onSuccess(payload!.areaSeasonId, getFirstSoilAttributeCode(previewData!.data))
     } catch (err: any) {
       toast({ title: 'Erro', description: err.message, variant: 'destructive' })
     } finally {

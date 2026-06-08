@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/select'
 import { supabase } from '@/lib/supabase/client'
 import { Tables } from '@/lib/supabase/types'
+import { SOIL_ATTRIBUTES } from '@/lib/soil-attributes'
 import { GeoMap, classifyPoints, type SoilPointData } from '@/components/map/GeoMap'
 import { AreaHistoricalAnalysisTab } from './tabs/AreaHistoricalAnalysisTab'
 import { AreaRecommendationsTab } from './tabs/AreaRecommendationsTab'
@@ -136,8 +137,8 @@ export default function AreaDetailsPage() {
   const [seasons, setSeasons] = useState<Season[]>([])
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>('')
 
-  const [attributes, setAttributes] = useState<{ code: string; name: string }[]>([])
-  const [selectedAttribute, setSelectedAttribute] = useState<string>('')
+  const [attributes] = useState<{ code: string; name: string }[]>(SOIL_ATTRIBUTES)
+  const [selectedAttribute, setSelectedAttribute] = useState<string>(SOIL_ATTRIBUTES[0]?.code || '')
   const [selectedDepth, setSelectedDepth] = useState<string>('0-20')
   const [pointsLoading, setPointsLoading] = useState(false)
   const [soilRefreshKey, setSoilRefreshKey] = useState(0)
@@ -163,7 +164,7 @@ export default function AreaDetailsPage() {
     if (!id) return
     async function loadAll() {
       try {
-        const [areaRes, seasonRes, attrRes] = await Promise.all([
+        const [areaRes, seasonRes] = await Promise.all([
           supabase
             .from('areas')
             .select('*, farms(id, name, producers(name))')
@@ -174,21 +175,12 @@ export default function AreaDetailsPage() {
             .select('id, season_year, crop')
             .eq('area_id', id)
             .order('season_year', { ascending: false }),
-          supabase
-            .from('lab_attributes')
-            .select('code, name')
-            .eq('active', true)
-            .order('display_order'),
         ])
 
         if (!areaRes.error && areaRes.data) setArea(areaRes.data as any)
         if (!seasonRes.error && seasonRes.data) {
           setSeasons(seasonRes.data)
           setSelectedSeasonId(seasonRes.data[0]?.id || '')
-        }
-        if (!attrRes.error && attrRes.data) {
-          setAttributes(attrRes.data)
-          setSelectedAttribute(attrRes.data[0]?.code || '')
         }
         await loadMapData()
       } catch (err) {
@@ -573,9 +565,10 @@ export default function AreaDetailsPage() {
         open={soilWizardOpen}
         onOpenChange={setSoilWizardOpen}
         areaId={id!}
-        onSuccess={(seasonId) => {
+        onSuccess={(seasonId, attributeCode) => {
           setSoilWizardOpen(false)
           if (seasonId) setSelectedSeasonId(seasonId)
+          if (attributeCode) setSelectedAttribute(attributeCode)
           setSoilRefreshKey((key) => key + 1)
         }}
       />
