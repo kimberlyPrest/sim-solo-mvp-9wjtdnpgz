@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Map, Tractor, Users, LayoutDashboard, UploadCloud, Sprout } from 'lucide-react'
+import { Map, Tractor, Users, LayoutDashboard, Sprout } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -16,7 +16,6 @@ const navItems = [
   { title: 'Produtores', url: '/produtores', icon: Users },
   { title: 'Fazendas', url: '/fazendas', icon: Tractor },
   { title: 'Áreas', url: '/areas', icon: Map },
-  { title: 'Importações', url: '/importacoes', icon: UploadCloud },
 ]
 
 export function AppSidebar() {
