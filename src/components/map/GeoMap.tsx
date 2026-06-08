@@ -1,11 +1,11 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from 'react-leaflet'
 import L from 'leaflet'
 
 export type SoilCategory = 'low' | 'medium' | 'adequate' | 'high'
 
 export type SoilPointData = {
-  id: string
+  id?: string
   code: string
   lat: number
   lng: number
@@ -57,16 +57,101 @@ const TILE_CLASSES: Record<keyof typeof TILE_URLS, string | undefined> = {
 
 type TileStyle = keyof typeof TILE_URLS
 
-function makePointIcon(category?: SoilCategory, size = 14) {
+const MIN_POINT_SIZE = 4
+const MAX_POINT_SIZE = 14
+const DEFAULT_POINT_SIZE = 7
+const POINT_BOUNDARY_RATIO = 0.035
+
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function extendGeoJsonBounds(bounds: L.LatLngBounds, geometry?: any) {
+  if (!geometry) return
+  try {
+    bounds.extend(L.geoJSON(geometry).getBounds())
+  } catch (_e) {
+    /* ignore invalid geometry */
+  }
+}
+
+function makePointIcon(category?: SoilCategory, size = DEFAULT_POINT_SIZE) {
   const colors = category
     ? CATEGORY_COLORS[category]
     : { fill: 'hsl(85 72% 52%)', border: 'hsl(85 72% 38%)' }
+  const borderWidth = size <= 7 ? 1 : 2
+  const shadow = size >= 8 ? `box-shadow:0 0 ${Math.round(size * 0.45)}px ${colors.fill}80;` : ''
+
   return L.divIcon({
-    className: '',
-    html: `<div style="width:${size}px;height:${size}px;background:${colors.fill};border-radius:50%;border:2px solid ${colors.border};box-shadow:0 0 6px ${colors.fill}80;"></div>`,
+    className: 'sampling-point-marker',
+    html: `<div style="box-sizing:border-box;width:${size}px;height:${size}px;background:${colors.fill};border-radius:50%;border:${borderWidth}px solid ${colors.border};${shadow}"></div>`,
     iconSize: [size, size],
     iconAnchor: [size / 2, size / 2],
   })
+}
+
+function getRenderedGeometryBounds(
+  features?: MapFeature[],
+  boundary?: any,
+  points?: SoilPointData[],
+) {
+  const bounds = L.latLngBounds([])
+
+  features?.forEach((f) => extendGeoJsonBounds(bounds, f.boundary))
+  extendGeoJsonBounds(bounds, boundary)
+
+  if (!bounds.isValid()) {
+    points?.forEach((p) => {
+      if (p.lat && p.lng) bounds.extend([p.lat, p.lng])
+    })
+  }
+
+  return bounds
+}
+
+function useResponsivePointSize({
+  features,
+  boundary,
+  points,
+}: {
+  features?: MapFeature[]
+  boundary?: any
+  points?: SoilPointData[]
+}) {
+  const map = useMap()
+  const [pointSize, setPointSize] = useState(DEFAULT_POINT_SIZE)
+
+  useEffect(() => {
+    function updatePointSize() {
+      const zoomSize = clamp(Math.round(map.getZoom() * 1.25 - 10), MIN_POINT_SIZE, MAX_POINT_SIZE)
+      const bounds = getRenderedGeometryBounds(features, boundary, points)
+      let nextSize = zoomSize
+
+      if (bounds.isValid()) {
+        const nw = map.latLngToContainerPoint(bounds.getNorthWest())
+        const se = map.latLngToContainerPoint(bounds.getSouthEast())
+        const renderedWidth = Math.abs(se.x - nw.x)
+        const renderedHeight = Math.abs(se.y - nw.y)
+        const smallestRenderedSide = Math.min(renderedWidth, renderedHeight)
+        const boundaryCap = clamp(
+          Math.floor(smallestRenderedSide * POINT_BOUNDARY_RATIO),
+          MIN_POINT_SIZE,
+          MAX_POINT_SIZE,
+        )
+        nextSize = Math.min(zoomSize, boundaryCap)
+      }
+
+      setPointSize((current) => (current === nextSize ? current : nextSize))
+    }
+
+    updatePointSize()
+    map.on('zoomend moveend resize', updatePointSize)
+    return () => {
+      map.off('zoomend moveend resize', updatePointSize)
+    }
+  }, [map, features, boundary, points])
+
+  return pointSize
 }
 
 function MapBounds({
@@ -81,29 +166,7 @@ function MapBounds({
   const map = useMap()
 
   useEffect(() => {
-    const bounds = L.latLngBounds([])
-
-    features?.forEach((f) => {
-      if (f.boundary) {
-        try {
-          bounds.extend(L.geoJSON(f.boundary).getBounds())
-        } catch (_e) {
-          /* ignore invalid geometry */
-        }
-      }
-    })
-
-    if (boundary) {
-      try {
-        bounds.extend(L.geoJSON(boundary).getBounds())
-      } catch (_e) {
-        /* ignore invalid geometry */
-      }
-    }
-
-    points?.forEach((p) => {
-      if (p.lat && p.lng) bounds.extend([p.lat, p.lng])
-    })
+    const bounds = getRenderedGeometryBounds(features, boundary, points)
 
     if (bounds.isValid()) {
       map.fitBounds(bounds, { padding: [24, 24] })
@@ -111,6 +174,70 @@ function MapBounds({
   }, [map, features, boundary, points])
 
   return null
+}
+
+function PointMarkers({
+  points,
+  features,
+  boundary,
+}: {
+  points?: SoilPointData[]
+  features?: MapFeature[]
+  boundary?: any
+}) {
+  const pointSize = useResponsivePointSize({ features, boundary, points })
+
+  if (!points?.length) return null
+
+  return (
+    <>
+      {points.map((p, index) => (
+        <Marker
+          key={p.id || `${p.code}-${p.lat}-${p.lng}-${index}`}
+          position={[p.lat, p.lng]}
+          icon={makePointIcon(p.category, pointSize)}
+        >
+          <Popup>
+            <div
+              style={{
+                fontFamily: 'IBM Plex Mono, monospace',
+                fontSize: 12,
+                color: 'hsl(120 10% 90%)',
+                minWidth: 100,
+              }}
+            >
+              <div style={{ fontWeight: 600, marginBottom: 4, color: 'hsl(85 72% 60%)' }}>
+                Ponto {p.code}
+              </div>
+              {p.value != null && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <span style={{ color: 'hsl(120 8% 55%)' }}>valor</span>
+                  <span style={{ fontWeight: 500 }}>
+                    {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
+                  </span>
+                </div>
+              )}
+              {p.category && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                    marginTop: 2,
+                  }}
+                >
+                  <span style={{ color: 'hsl(120 8% 55%)' }}>classe</span>
+                  <span style={{ color: CATEGORY_COLORS[p.category].fill, fontWeight: 500 }}>
+                    {CATEGORY_LABELS[p.category]}
+                  </span>
+                </div>
+              )}
+            </div>
+          </Popup>
+        </Marker>
+      ))}
+    </>
+  )
 }
 
 function Legend({ categories }: { categories: SoilCategory[] }) {
@@ -258,47 +385,7 @@ export function GeoMap({
         })}
 
         {/* Sampling points */}
-        {points?.map((p) => (
-          <Marker key={p.id} position={[p.lat, p.lng]} icon={makePointIcon(p.category)}>
-            <Popup>
-              <div
-                style={{
-                  fontFamily: 'IBM Plex Mono, monospace',
-                  fontSize: 12,
-                  color: 'hsl(120 10% 90%)',
-                  minWidth: 100,
-                }}
-              >
-                <div style={{ fontWeight: 600, marginBottom: 4, color: 'hsl(85 72% 60%)' }}>
-                  Ponto {p.code}
-                </div>
-                {p.value != null && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
-                    <span style={{ color: 'hsl(120 8% 55%)' }}>valor</span>
-                    <span style={{ fontWeight: 500 }}>
-                      {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}
-                    </span>
-                  </div>
-                )}
-                {p.category && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      gap: 12,
-                      marginTop: 2,
-                    }}
-                  >
-                    <span style={{ color: 'hsl(120 8% 55%)' }}>classe</span>
-                    <span style={{ color: CATEGORY_COLORS[p.category].fill, fontWeight: 500 }}>
-                      {CATEGORY_LABELS[p.category]}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        <PointMarkers points={points} features={features} boundary={boundary} />
         <MapBounds features={features} boundary={boundary} points={points} />
       </MapContainer>
       {showLegend && presentCategories.length > 0 && <Legend categories={presentCategories} />}
