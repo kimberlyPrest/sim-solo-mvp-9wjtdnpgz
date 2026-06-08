@@ -11,6 +11,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  Trash2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -30,6 +31,9 @@ import { AreaRecommendationsTab } from './tabs/AreaRecommendationsTab'
 import { GeographicImportWizard } from '@/features/areas/GeographicImportWizard'
 import { ImportSoilWizard } from '@/features/soil/ImportSoilWizard'
 import { useAuth } from '@/hooks/use-auth'
+import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
+import { deleteAreaCascade } from '@/lib/entity-deletion'
+import { useToast } from '@/hooks/use-toast'
 
 type AreaDetails = Tables<'areas'> & {
   farms: { name: string; id: string; producers: { name: string } | null } | null
@@ -120,6 +124,7 @@ export default function AreaDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { hasRole } = useAuth()
+  const { toast } = useToast()
   const canEdit = hasRole(['admin', 'technician'])
 
   const [area, setArea] = useState<AreaDetails | null>(null)
@@ -138,6 +143,8 @@ export default function AreaDetailsPage() {
 
   const [geoWizardOpen, setGeoWizardOpen] = useState(false)
   const [soilWizardOpen, setSoilWizardOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadMapData = useCallback(async () => {
     if (!id) return
@@ -243,6 +250,21 @@ export default function AreaDetailsPage() {
       : selectedSeason.season_year
     : ''
 
+  const handleDelete = async () => {
+    if (!area) return
+    const farmId = area.farms?.id
+    setIsDeleting(true)
+    try {
+      await deleteAreaCascade(area.id)
+      toast({ title: 'Sucesso', description: 'Área apagada definitivamente.' })
+      navigate(farmId ? `/fazendas/${farmId}` : '/areas')
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
@@ -297,6 +319,15 @@ export default function AreaDetailsPage() {
             <Button size="sm" variant="outline" onClick={() => setSoilWizardOpen(true)}>
               <FlaskConical className="h-3.5 w-3.5 mr-1.5" />
               <span className="hidden sm:inline">Solo</span>
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              <span className="hidden sm:inline">Apagar</span>
             </Button>
           </div>
         )}
@@ -542,6 +573,16 @@ export default function AreaDetailsPage() {
         onOpenChange={setSoilWizardOpen}
         areaId={id!}
         onSuccess={() => setSoilWizardOpen(false)}
+      />
+
+      <DeleteEntityDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Apagar área"
+        description={`Você está prestes a apagar ${area.name}.`}
+        details="Também serão apagadas as safras, pontos, análises e recomendações vinculadas."
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
       />
     </div>
   )

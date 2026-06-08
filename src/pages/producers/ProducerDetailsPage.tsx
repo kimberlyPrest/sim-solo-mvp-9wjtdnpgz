@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
-import { Archive, ArrowLeft, Tractor, Plus } from 'lucide-react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { Archive, ArrowLeft, Tractor, Plus, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -25,15 +25,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
+import { deleteProducerCascade } from '@/lib/entity-deletion'
 
 export default function ProducerDetailsPage() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { organization, hasRole } = useAuth()
   const { toast } = useToast()
   const [producer, setProducer] = useState<Tables<'producers'> | null>(null)
   const [farms, setFarms] = useState<Tables<'farms'>[]>([])
   const [loading, setLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const canEdit = hasRole(['admin', 'technician'])
 
@@ -99,6 +104,20 @@ export default function ProducerDetailsPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!producer) return
+    setIsDeleting(true)
+    try {
+      await deleteProducerCascade(producer.id)
+      toast({ title: 'Sucesso', description: 'Produtor apagado definitivamente.' })
+      navigate('/produtores')
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   if (loading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>
   if (!producer) return <div className="p-8 text-center">Produtor não encontrado.</div>
 
@@ -126,10 +145,20 @@ export default function ProducerDetailsPage() {
           </Badge>
         </div>
         {canEdit && (
-          <Button variant="outline" onClick={handleArchive}>
-            <Archive className="mr-2 h-4 w-4" />
-            {producer.status === 'active' ? 'Arquivar Produtor' : 'Reativar Produtor'}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleArchive}>
+              <Archive className="mr-2 h-4 w-4" />
+              {producer.status === 'active' ? 'Arquivar Produtor' : 'Reativar Produtor'}
+            </Button>
+            <Button
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setDeleteOpen(true)}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Apagar
+            </Button>
+          </div>
         )}
       </div>
 
@@ -215,6 +244,16 @@ export default function ProducerDetailsPage() {
           </Card>
         </div>
       </div>
+
+      <DeleteEntityDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Apagar produtor"
+        description={`Você está prestes a apagar ${producer.name}.`}
+        details="Também serão apagadas as fazendas, áreas, safras, pontos, análises e recomendações vinculadas."
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

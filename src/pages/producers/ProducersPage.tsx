@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, User } from 'lucide-react'
+import { Plus, Search, Trash2, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Tables } from '@/lib/supabase/types'
 import { ProducerForm, ProducerFormData } from './ProducerForm'
+import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
+import { deleteProducerCascade } from '@/lib/entity-deletion'
 
 export default function ProducersPage() {
   const { organization, hasRole } = useAuth()
@@ -27,6 +29,8 @@ export default function ProducersPage() {
   const [search, setSearch] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Tables<'producers'> | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
 
   const canEdit = hasRole(['admin', 'technician'])
@@ -75,6 +79,21 @@ export default function ProducersPage() {
       toast({ title: 'Sucesso', description: 'Produtor criado com sucesso.' })
       setIsSheetOpen(false)
       fetchProducers()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      await deleteProducerCascade(deleteTarget.id)
+      toast({ title: 'Sucesso', description: 'Produtor apagado definitivamente.' })
+      setDeleteTarget(null)
+      fetchProducers()
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -144,6 +163,7 @@ export default function ProducersPage() {
                     <TableHead>Nome</TableHead>
                     <TableHead>Documento</TableHead>
                     <TableHead>Status</TableHead>
+                    {canEdit && <TableHead className="w-[72px] text-right">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -163,6 +183,19 @@ export default function ProducersPage() {
                           {producer.status === 'active' ? 'Ativo' : 'Arquivado'}
                         </Badge>
                       </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            aria-label={`Apagar produtor ${producer.name}`}
+                            onClick={() => setDeleteTarget(producer)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -171,6 +204,20 @@ export default function ProducersPage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteEntityDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Apagar produtor"
+        description={
+          deleteTarget
+            ? `Você está prestes a apagar ${deleteTarget.name}.`
+            : 'Você está prestes a apagar este produtor.'
+        }
+        details="Também serão apagadas as fazendas, áreas, safras, pontos, análises e recomendações vinculadas."
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

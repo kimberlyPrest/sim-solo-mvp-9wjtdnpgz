@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Tractor } from 'lucide-react'
+import { Plus, Search, Tractor, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Tables } from '@/lib/supabase/types'
 import { FarmForm, FarmFormData } from './FarmForm'
+import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
+import { deleteFarmCascade } from '@/lib/entity-deletion'
 
 export default function FarmsPage() {
   const { organization, hasRole } = useAuth()
@@ -29,6 +31,8 @@ export default function FarmsPage() {
   const [search, setSearch] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<FarmWithProducer | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
 
   const canEdit = hasRole(['admin', 'technician'])
@@ -86,6 +90,21 @@ export default function FarmsPage() {
       toast({ title: 'Sucesso', description: 'Fazenda criada com sucesso.' })
       setIsSheetOpen(false)
       fetchData()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      await deleteFarmCascade(deleteTarget.id)
+      toast({ title: 'Sucesso', description: 'Fazenda apagada definitivamente.' })
+      setDeleteTarget(null)
+      fetchData()
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -154,6 +173,7 @@ export default function FarmsPage() {
                     <TableHead>Produtor</TableHead>
                     <TableHead>Cidade/UF</TableHead>
                     <TableHead>Status</TableHead>
+                    {canEdit && <TableHead className="w-[72px] text-right">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -171,6 +191,19 @@ export default function FarmsPage() {
                           {farm.status === 'active' ? 'Ativo' : 'Arquivado'}
                         </Badge>
                       </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            aria-label={`Apagar fazenda ${farm.name}`}
+                            onClick={() => setDeleteTarget(farm)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -179,6 +212,20 @@ export default function FarmsPage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteEntityDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Apagar fazenda"
+        description={
+          deleteTarget
+            ? `Você está prestes a apagar ${deleteTarget.name}.`
+            : 'Você está prestes a apagar esta fazenda.'
+        }
+        details="Também serão apagadas as áreas, safras, pontos, análises e recomendações vinculadas."
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

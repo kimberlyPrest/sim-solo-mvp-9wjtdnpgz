@@ -10,6 +10,7 @@ import {
   MapPin,
   FlaskConical,
   ArrowLeft,
+  Trash2,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
@@ -26,6 +27,8 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog'
 import { FarmForm, FarmFormData } from './FarmForm'
+import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
+import { deleteFarmCascade } from '@/lib/entity-deletion'
 
 type FarmAreaData = {
   id: string
@@ -73,6 +76,8 @@ export default function FarmDetailsPage() {
   const [selectedAreaId, setSelectedAreaId] = useState<string | undefined>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const canEdit = hasRole(['admin', 'technician'])
 
@@ -169,6 +174,20 @@ export default function FarmDetailsPage() {
     }
   }
 
+  const handleDelete = async () => {
+    if (!farm) return
+    setIsDeleting(true)
+    try {
+      await deleteFarmCascade(farm.id)
+      toast({ title: 'Sucesso', description: 'Fazenda apagada definitivamente.' })
+      navigate('/fazendas')
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
   const mapFeatures = useMemo<MapFeature[]>(
     () =>
       areas
@@ -257,6 +276,15 @@ export default function FarmDetailsPage() {
               <Button variant="ghost" size="sm" onClick={handleArchive}>
                 <Archive className="h-4 w-4 mr-1" />
                 {farm.status === 'active' ? 'Arquivar' : 'Reativar'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Apagar
               </Button>
             </>
           )}
@@ -418,6 +446,16 @@ export default function FarmDetailsPage() {
           </div>
         )}
       </div>
+
+      <DeleteEntityDialog
+        open={deleteOpen}
+        onOpenChange={setDeleteOpen}
+        title="Apagar fazenda"
+        description={`Você está prestes a apagar ${farm.name}.`}
+        details="Também serão apagadas as áreas, safras, pontos, análises e recomendações vinculadas."
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }

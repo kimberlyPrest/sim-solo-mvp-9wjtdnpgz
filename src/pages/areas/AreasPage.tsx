@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Search, Map } from 'lucide-react'
+import { Plus, Search, Map, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -19,6 +19,8 @@ import { Badge } from '@/components/ui/badge'
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Tables } from '@/lib/supabase/types'
 import { AreaForm, AreaFormData } from './AreaForm'
+import { DeleteEntityDialog } from '@/components/DeleteEntityDialog'
+import { deleteAreaCascade } from '@/lib/entity-deletion'
 
 export default function AreasPage() {
   const { organization, hasRole } = useAuth()
@@ -31,6 +33,8 @@ export default function AreasPage() {
   const [search, setSearch] = useState('')
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AreaWithFarm | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
 
   const canEdit = hasRole(['admin', 'technician'])
@@ -88,6 +92,21 @@ export default function AreasPage() {
       toast({ title: 'Sucesso', description: 'Área criada com sucesso.' })
       setIsSheetOpen(false)
       fetchData()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return
+    setIsDeleting(true)
+    try {
+      await deleteAreaCascade(deleteTarget.id)
+      toast({ title: 'Sucesso', description: 'Área apagada definitivamente.' })
+      setDeleteTarget(null)
+      fetchData()
+    } catch (err: any) {
+      toast({ title: 'Erro', description: err.message, variant: 'destructive' })
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -156,6 +175,7 @@ export default function AreasPage() {
                     <TableHead>Fazenda</TableHead>
                     <TableHead>Produtor</TableHead>
                     <TableHead>Status</TableHead>
+                    {canEdit && <TableHead className="w-[72px] text-right">Ações</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -173,6 +193,19 @@ export default function AreasPage() {
                           {area.status === 'active' ? 'Ativo' : 'Arquivado'}
                         </Badge>
                       </TableCell>
+                      {canEdit && (
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            aria-label={`Apagar área ${area.name}`}
+                            onClick={() => setDeleteTarget(area)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -181,6 +214,20 @@ export default function AreasPage() {
           )}
         </CardContent>
       </Card>
+
+      <DeleteEntityDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Apagar área"
+        description={
+          deleteTarget
+            ? `Você está prestes a apagar ${deleteTarget.name}.`
+            : 'Você está prestes a apagar esta área.'
+        }
+        details="Também serão apagadas as safras, pontos, análises e recomendações vinculadas."
+        isDeleting={isDeleting}
+        onConfirm={handleDelete}
+      />
     </div>
   )
 }
