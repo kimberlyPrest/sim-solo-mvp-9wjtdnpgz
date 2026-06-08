@@ -16,7 +16,6 @@ import FarmsPage from './pages/farms/FarmsPage'
 import FarmDetailsPage from './pages/farms/FarmDetailsPage'
 import AreasPage from './pages/areas/AreasPage'
 import AreaDetailsPage from './pages/areas/AreaDetailsPage'
-import ImportsPage from './pages/imports/ImportsPage'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -33,7 +32,6 @@ const App = () => (
           <Route path="/fazendas/:id" element={<FarmDetailsPage />} />
           <Route path="/areas" element={<AreasPage />} />
           <Route path="/areas/:id" element={<AreaDetailsPage />} />
-          <Route path="/importacoes" element={<ImportsPage />} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

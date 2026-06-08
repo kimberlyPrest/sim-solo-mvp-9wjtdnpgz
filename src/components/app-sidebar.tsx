@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Map, Tractor, Users, LayoutDashboard, UploadCloud, Leaf, Sprout } from 'lucide-react'
+import { Map, Tractor, Users, LayoutDashboard, Leaf, Sprout } from 'lucide-react'
 
 import {
   Sidebar,
@@ -20,8 +20,6 @@ const mainNavItems = [
   { title: 'Fazendas', url: '/fazendas', icon: Tractor },
   { title: 'Áreas / Talhões', url: '/areas', icon: Map },
 ]
-
-const toolNavItems = [{ title: 'Importação', url: '/importacoes', icon: UploadCloud }]
 
 export function AppSidebar() {
   const location = useLocation()
@@ -51,23 +49,6 @@ export function AppSidebar() {
                         : location.pathname.startsWith(item.url)
                     }
                   >
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-        <SidebarGroup>
-          <SidebarGroupLabel>Ferramentas</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {toolNavItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname.startsWith(item.url)}>
                     <Link to={item.url}>
                       <item.icon />
                       <span>{item.title}</span>

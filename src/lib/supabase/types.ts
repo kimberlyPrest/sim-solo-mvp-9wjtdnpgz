@@ -1,17 +1,11 @@
 // AVOID UPDATING THIS FILE DIRECTLY. It is automatically generated.
-export type Json =
-  | string
-  | number
-  | boolean
-  | null
-  | { [key: string]: Json | undefined }
-  | Json[]
+export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: '14.5'
   }
   public: {
     Tables: {
@@ -72,18 +66,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "area_seasons_area_id_fkey"
-            columns: ["area_id"]
+            foreignKeyName: 'area_seasons_area_id_fkey'
+            columns: ['area_id']
             isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
+            referencedRelation: 'areas'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "area_seasons_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'area_seasons_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -99,7 +93,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           source_srid: number | null
-          status: Database["public"]["Enums"]["record_status"]
+          status: Database['public']['Enums']['record_status']
           total_area_ha: number | null
           updated_at: string
         }
@@ -114,7 +108,7 @@ export type Database = {
           notes?: string | null
           organization_id: string
           source_srid?: number | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           total_area_ha?: number | null
           updated_at?: string
         }
@@ -129,24 +123,24 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           source_srid?: number | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           total_area_ha?: number | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "areas_farm_id_fkey"
-            columns: ["farm_id"]
+            foreignKeyName: 'areas_farm_id_fkey'
+            columns: ['farm_id']
             isOneToOne: false
-            referencedRelation: "farms"
-            referencedColumns: ["id"]
+            referencedRelation: 'farms'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "areas_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'areas_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -205,7 +199,7 @@ export type Database = {
           organization_id: string
           producer_id: string
           state: string | null
-          status: Database["public"]["Enums"]["record_status"]
+          status: Database['public']['Enums']['record_status']
           total_area_ha: number | null
           updated_at: string
         }
@@ -218,7 +212,7 @@ export type Database = {
           organization_id: string
           producer_id: string
           state?: string | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           total_area_ha?: number | null
           updated_at?: string
         }
@@ -231,24 +225,24 @@ export type Database = {
           organization_id?: string
           producer_id?: string
           state?: string | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           total_area_ha?: number | null
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "farms_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'farms_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "farms_producer_id_fkey"
-            columns: ["producer_id"]
+            foreignKeyName: 'farms_producer_id_fkey'
+            columns: ['producer_id']
             isOneToOne: false
-            referencedRelation: "producers"
-            referencedColumns: ["id"]
+            referencedRelation: 'producers'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -291,18 +285,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "import_files_import_id_fkey"
-            columns: ["import_id"]
+            foreignKeyName: 'import_files_import_id_fkey'
+            columns: ['import_id']
             isOneToOne: false
-            referencedRelation: "imports"
-            referencedColumns: ["id"]
+            referencedRelation: 'imports'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "import_files_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'import_files_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -315,11 +309,11 @@ export type Database = {
           created_by: string
           error_summary: Json | null
           id: string
-          kind: Database["public"]["Enums"]["import_kind"]
+          kind: Database['public']['Enums']['import_kind']
           log_messages: Json | null
           organization_id: string
           source_srid: number | null
-          status: Database["public"]["Enums"]["import_status"]
+          status: Database['public']['Enums']['import_status']
           updated_at: string
           uploaded_by: string | null
           validation_summary: Json | null
@@ -332,11 +326,11 @@ export type Database = {
           created_by: string
           error_summary?: Json | null
           id?: string
-          kind: Database["public"]["Enums"]["import_kind"]
+          kind: Database['public']['Enums']['import_kind']
           log_messages?: Json | null
           organization_id: string
           source_srid?: number | null
-          status?: Database["public"]["Enums"]["import_status"]
+          status?: Database['public']['Enums']['import_status']
           updated_at?: string
           uploaded_by?: string | null
           validation_summary?: Json | null
@@ -349,50 +343,50 @@ export type Database = {
           created_by?: string
           error_summary?: Json | null
           id?: string
-          kind?: Database["public"]["Enums"]["import_kind"]
+          kind?: Database['public']['Enums']['import_kind']
           log_messages?: Json | null
           organization_id?: string
           source_srid?: number | null
-          status?: Database["public"]["Enums"]["import_status"]
+          status?: Database['public']['Enums']['import_status']
           updated_at?: string
           uploaded_by?: string | null
           validation_summary?: Json | null
         }
         Relationships: [
           {
-            foreignKeyName: "imports_area_id_fkey"
-            columns: ["area_id"]
+            foreignKeyName: 'imports_area_id_fkey'
+            columns: ['area_id']
             isOneToOne: false
-            referencedRelation: "areas"
-            referencedColumns: ["id"]
+            referencedRelation: 'areas'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "imports_area_season_id_fkey"
-            columns: ["area_season_id"]
+            foreignKeyName: 'imports_area_season_id_fkey'
+            columns: ['area_season_id']
             isOneToOne: false
-            referencedRelation: "area_seasons"
-            referencedColumns: ["id"]
+            referencedRelation: 'area_seasons'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "imports_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: 'imports_created_by_fkey'
+            columns: ['created_by']
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "imports_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'imports_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "imports_uploaded_by_fkey"
-            columns: ["uploaded_by"]
+            foreignKeyName: 'imports_uploaded_by_fkey'
+            columns: ['uploaded_by']
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -483,25 +477,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "lab_measurements_attribute_id_fkey"
-            columns: ["attribute_id"]
+            foreignKeyName: 'lab_measurements_attribute_id_fkey'
+            columns: ['attribute_id']
             isOneToOne: false
-            referencedRelation: "lab_attributes"
-            referencedColumns: ["id"]
+            referencedRelation: 'lab_attributes'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "lab_measurements_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'lab_measurements_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "lab_measurements_sample_id_fkey"
-            columns: ["sample_id"]
+            foreignKeyName: 'lab_measurements_sample_id_fkey'
+            columns: ['sample_id']
             isOneToOne: false
-            referencedRelation: "samples"
-            referencedColumns: ["id"]
+            referencedRelation: 'samples'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -509,38 +503,38 @@ export type Database = {
         Row: {
           created_at: string
           organization_id: string
-          role: Database["public"]["Enums"]["member_role"]
+          role: Database['public']['Enums']['member_role']
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           organization_id: string
-          role?: Database["public"]["Enums"]["member_role"]
+          role?: Database['public']['Enums']['member_role']
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           organization_id?: string
-          role?: Database["public"]["Enums"]["member_role"]
+          role?: Database['public']['Enums']['member_role']
           updated_at?: string
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "organization_members_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'organization_members_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "organization_members_user_id_fkey"
-            columns: ["user_id"]
+            foreignKeyName: 'organization_members_user_id_fkey'
+            columns: ['user_id']
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -575,7 +569,7 @@ export type Database = {
           notes: string | null
           organization_id: string
           phone: string | null
-          status: Database["public"]["Enums"]["record_status"]
+          status: Database['public']['Enums']['record_status']
           updated_at: string
         }
         Insert: {
@@ -587,7 +581,7 @@ export type Database = {
           notes?: string | null
           organization_id: string
           phone?: string | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           updated_at?: string
         }
         Update: {
@@ -599,16 +593,16 @@ export type Database = {
           notes?: string | null
           organization_id?: string
           phone?: string | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "producers_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'producers_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -642,7 +636,7 @@ export type Database = {
           dose: number
           id: string
           item: string
-          kind: Database["public"]["Enums"]["recommendation_kind"]
+          kind: Database['public']['Enums']['recommendation_kind']
           notes: string | null
           organization_id: string
           product: string
@@ -656,7 +650,7 @@ export type Database = {
           dose: number
           id?: string
           item: string
-          kind: Database["public"]["Enums"]["recommendation_kind"]
+          kind: Database['public']['Enums']['recommendation_kind']
           notes?: string | null
           organization_id: string
           product: string
@@ -670,7 +664,7 @@ export type Database = {
           dose?: number
           id?: string
           item?: string
-          kind?: Database["public"]["Enums"]["recommendation_kind"]
+          kind?: Database['public']['Enums']['recommendation_kind']
           notes?: string | null
           organization_id?: string
           product?: string
@@ -681,25 +675,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "recommendation_items_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'recommendation_items_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recommendation_items_point_id_fkey"
-            columns: ["sampling_point_id"]
+            foreignKeyName: 'recommendation_items_point_id_fkey'
+            columns: ['sampling_point_id']
             isOneToOne: false
-            referencedRelation: "sampling_points"
-            referencedColumns: ["id"]
+            referencedRelation: 'sampling_points'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recommendation_items_set_id_fkey"
-            columns: ["set_id"]
+            foreignKeyName: 'recommendation_items_set_id_fkey'
+            columns: ['set_id']
             isOneToOne: false
-            referencedRelation: "recommendation_sets"
-            referencedColumns: ["id"]
+            referencedRelation: 'recommendation_sets'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -709,7 +703,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
-          kind: Database["public"]["Enums"]["recommendation_kind"] | null
+          kind: Database['public']['Enums']['recommendation_kind'] | null
           name: string
           notes: string | null
           organization_id: string
@@ -721,7 +715,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          kind?: Database["public"]["Enums"]["recommendation_kind"] | null
+          kind?: Database['public']['Enums']['recommendation_kind'] | null
           name: string
           notes?: string | null
           organization_id: string
@@ -733,7 +727,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
-          kind?: Database["public"]["Enums"]["recommendation_kind"] | null
+          kind?: Database['public']['Enums']['recommendation_kind'] | null
           name?: string
           notes?: string | null
           organization_id?: string
@@ -742,25 +736,25 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "recommendation_sets_campaign_id_fkey"
-            columns: ["campaign_id"]
+            foreignKeyName: 'recommendation_sets_campaign_id_fkey'
+            columns: ['campaign_id']
             isOneToOne: false
-            referencedRelation: "sampling_campaigns"
-            referencedColumns: ["id"]
+            referencedRelation: 'sampling_campaigns'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recommendation_sets_created_by_fkey"
-            columns: ["created_by"]
+            foreignKeyName: 'recommendation_sets_created_by_fkey'
+            columns: ['created_by']
             isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "recommendation_sets_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'recommendation_sets_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -806,18 +800,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "samples_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'samples_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "samples_point_id_fkey"
-            columns: ["sampling_point_id"]
+            foreignKeyName: 'samples_point_id_fkey'
+            columns: ['sampling_point_id']
             isOneToOne: false
-            referencedRelation: "sampling_points"
-            referencedColumns: ["id"]
+            referencedRelation: 'sampling_points'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -834,9 +828,9 @@ export type Database = {
           organization_id: string
           result_date: string | null
           sample_date: string | null
-          source: Database["public"]["Enums"]["campaign_source"]
+          source: Database['public']['Enums']['campaign_source']
           start_date: string | null
-          status: Database["public"]["Enums"]["record_status"]
+          status: Database['public']['Enums']['record_status']
           updated_at: string
         }
         Insert: {
@@ -851,9 +845,9 @@ export type Database = {
           organization_id: string
           result_date?: string | null
           sample_date?: string | null
-          source?: Database["public"]["Enums"]["campaign_source"]
+          source?: Database['public']['Enums']['campaign_source']
           start_date?: string | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           updated_at?: string
         }
         Update: {
@@ -868,25 +862,25 @@ export type Database = {
           organization_id?: string
           result_date?: string | null
           sample_date?: string | null
-          source?: Database["public"]["Enums"]["campaign_source"]
+          source?: Database['public']['Enums']['campaign_source']
           start_date?: string | null
-          status?: Database["public"]["Enums"]["record_status"]
+          status?: Database['public']['Enums']['record_status']
           updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "sampling_campaigns_area_season_id_fkey"
-            columns: ["area_season_id"]
+            foreignKeyName: 'sampling_campaigns_area_season_id_fkey'
+            columns: ['area_season_id']
             isOneToOne: false
-            referencedRelation: "area_seasons"
-            referencedColumns: ["id"]
+            referencedRelation: 'area_seasons'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "sampling_campaigns_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'sampling_campaigns_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -929,18 +923,18 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "sampling_points_campaign_id_fkey"
-            columns: ["campaign_id"]
+            foreignKeyName: 'sampling_points_campaign_id_fkey'
+            columns: ['campaign_id']
             isOneToOne: false
-            referencedRelation: "sampling_campaigns"
-            referencedColumns: ["id"]
+            referencedRelation: 'sampling_campaigns'
+            referencedColumns: ['id']
           },
           {
-            foreignKeyName: "sampling_points_organization_id_fkey"
-            columns: ["organization_id"]
+            foreignKeyName: 'sampling_points_organization_id_fkey'
+            columns: ['organization_id']
             isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
+            referencedRelation: 'organizations'
+            referencedColumns: ['id']
           },
         ]
       }
@@ -995,7 +989,7 @@ export type Database = {
       get_user_organizations: { Args: never; Returns: string[] }
       has_role_in_org: {
         Args: {
-          allowed_roles: Database["public"]["Enums"]["member_role"][]
+          allowed_roles: Database['public']['Enums']['member_role'][]
           org_id: string
         }
         Returns: boolean
@@ -1010,17 +1004,12 @@ export type Database = {
       }
     }
     Enums: {
-      campaign_source: "sim" | "historical_standardized"
-      import_kind: "geography" | "soil_analysis" | "recommendations"
-      import_status:
-        | "uploaded"
-        | "validating"
-        | "validated"
-        | "committed"
-        | "failed"
-      member_role: "admin" | "technician" | "viewer"
-      recommendation_kind: "corrective" | "organic" | "nutritional"
-      record_status: "active" | "archived"
+      campaign_source: 'sim' | 'historical_standardized'
+      import_kind: 'geography' | 'soil_analysis' | 'recommendations'
+      import_status: 'uploaded' | 'validating' | 'validated' | 'committed' | 'failed'
+      member_role: 'admin' | 'technician' | 'viewer'
+      recommendation_kind: 'corrective' | 'organic' | 'nutritional'
+      record_status: 'active' | 'archived'
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1028,33 +1017,31 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, 'public'>]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
       Row: infer R
     }
     ? R
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
+    ? (DefaultSchema['Tables'] & DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
         Row: infer R
       }
       ? R
@@ -1063,23 +1050,23 @@ export type Tables<
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Insert: infer I
     }
     ? I
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Insert: infer I
       }
       ? I
@@ -1088,23 +1075,23 @@ export type TablesInsert<
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
+    | keyof DefaultSchema['Tables']
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
       Update: infer U
     }
     ? U
     : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
+    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
         Update: infer U
       }
       ? U
@@ -1113,57 +1100,50 @@ export type TablesUpdate<
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
+    | keyof DefaultSchema['Enums']
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
+    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
     : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
+    | keyof DefaultSchema['CompositeTypes']
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
+    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
     Enums: {
-      campaign_source: ["sim", "historical_standardized"],
-      import_kind: ["geography", "soil_analysis", "recommendations"],
-      import_status: [
-        "uploaded",
-        "validating",
-        "validated",
-        "committed",
-        "failed",
-      ],
-      member_role: ["admin", "technician", "viewer"],
-      recommendation_kind: ["corrective", "organic", "nutritional"],
-      record_status: ["active", "archived"],
+      campaign_source: ['sim', 'historical_standardized'],
+      import_kind: ['geography', 'soil_analysis', 'recommendations'],
+      import_status: ['uploaded', 'validating', 'validated', 'committed', 'failed'],
+      member_role: ['admin', 'technician', 'viewer'],
+      recommendation_kind: ['corrective', 'organic', 'nutritional'],
+      record_status: ['active', 'archived'],
     },
   },
 } as const
-
 
 // ====== DATABASE EXTENDED CONTEXT (auto-generated) ======
 // This section contains actual PostgreSQL column types, constraints, RLS policies,
@@ -1612,7 +1592,7 @@ export const Constants = {
 //         org_id := (old_data->>'organization_id')::UUID;
 //         ent_id := (old_data->>'id')::UUID;
 //     END IF;
-//   
+//
 //     IF ent_id IS NOT NULL THEN
 //         INSERT INTO public.audit_logs (
 //             organization_id, user_id, action, entity, entity_id, old_data, new_data
@@ -1620,14 +1600,14 @@ export const Constants = {
 //             org_id, auth.uid(), TG_OP, TG_TABLE_NAME, ent_id, old_data, new_data
 //         );
 //     END IF;
-//   
+//
 //     IF (TG_OP = 'DELETE') THEN
 //         RETURN OLD;
 //     END IF;
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION commit_geographic_import(uuid, uuid, uuid, text, jsonb, jsonb, numeric, integer, text, uuid, text, text, bigint)
 //   CREATE OR REPLACE FUNCTION public.commit_geographic_import(p_import_id uuid, p_area_id uuid, p_campaign_id uuid, p_action text, p_boundary_geojson jsonb, p_points jsonb, p_calculated_area_ha numeric, p_source_srid integer, p_justification text, p_org_id uuid, p_file_path text, p_original_name text, p_file_size bigint)
 //    RETURNS void
@@ -1644,24 +1624,24 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Acesso negado';
 //     END IF;
-//   
+//
 //     IF NOT EXISTS (
 //       SELECT 1 FROM public.areas a
 //       WHERE a.id = p_area_id AND a.organization_id = p_org_id
 //     ) THEN
 //       RAISE EXCEPTION 'Área inválida';
 //     END IF;
-//   
+//
 //     IF p_action NOT IN ('initial', 'new_points', 'update_boundary') THEN
 //       RAISE EXCEPTION 'Ação geográfica inválida';
 //     END IF;
-//   
+//
 //     IF p_action IN ('initial', 'new_points') AND (
 //       p_campaign_id IS NULL OR COALESCE(jsonb_array_length(p_points), 0) = 0
 //     ) THEN
 //       RAISE EXCEPTION 'A campanha e os pontos são obrigatórios';
 //     END IF;
-//   
+//
 //     IF p_campaign_id IS NOT NULL AND NOT EXISTS (
 //       SELECT 1
 //       FROM public.sampling_campaigns c
@@ -1672,23 +1652,23 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'A campanha não pertence à área';
 //     END IF;
-//   
+//
 //     IF p_action = 'initial' AND p_boundary_geojson IS NULL THEN
 //       RAISE EXCEPTION 'O contorno é obrigatório no cadastro inicial';
 //     END IF;
-//   
+//
 //     IF p_action = 'new_points' AND NOT EXISTS (
 //       SELECT 1 FROM public.areas a WHERE a.id = p_area_id AND a.boundary IS NOT NULL
 //     ) THEN
 //       RAISE EXCEPTION 'Cadastre o contorno antes de importar somente pontos';
 //     END IF;
-//   
+//
 //     IF p_action = 'update_boundary' AND (
 //       p_boundary_geojson IS NULL OR NULLIF(trim(p_justification), '') IS NULL
 //     ) THEN
 //       RAISE EXCEPTION 'Contorno e justificativa são obrigatórios';
 //     END IF;
-//   
+//
 //     INSERT INTO public.imports (
 //       id, organization_id, area_id, kind, status, created_by, uploaded_by,
 //       source_srid, validation_summary
@@ -1697,7 +1677,7 @@ export const Constants = {
 //       p_source_srid, jsonb_build_object('point_count', COALESCE(jsonb_array_length(p_points), 0))
 //     )
 //     ON CONFLICT (id) DO UPDATE SET status = 'validating';
-//   
+//
 //     IF p_file_path IS NOT NULL THEN
 //       INSERT INTO public.import_files (
 //         import_id, organization_id, file_path, storage_path, original_name, file_size, file_kind
@@ -1706,7 +1686,7 @@ export const Constants = {
 //       )
 //       ON CONFLICT (import_id, file_kind) DO NOTHING;
 //     END IF;
-//   
+//
 //     IF p_action IN ('initial', 'update_boundary') THEN
 //       UPDATE public.areas
 //       SET boundary = gis.ST_Multi(
@@ -1719,7 +1699,7 @@ export const Constants = {
 //           updated_at = NOW()
 //       WHERE id = p_area_id AND organization_id = p_org_id;
 //     END IF;
-//   
+//
 //     IF p_campaign_id IS NOT NULL AND COALESCE(jsonb_array_length(p_points), 0) > 0 THEN
 //       FOR v_point IN SELECT * FROM jsonb_array_elements(p_points)
 //       LOOP
@@ -1737,7 +1717,7 @@ export const Constants = {
 //         );
 //       END LOOP;
 //     END IF;
-//   
+//
 //     IF p_action = 'update_boundary' THEN
 //       INSERT INTO public.audit_logs (
 //         organization_id, user_id, actor_id, action, entity, entity_type, entity_id, new_data, changes
@@ -1747,11 +1727,11 @@ export const Constants = {
 //         jsonb_build_object('justification', p_justification, 'calculated_area_ha', p_calculated_area_ha)
 //       );
 //     END IF;
-//   
+//
 //     UPDATE public.imports
 //     SET status = 'committed', committed_at = NOW()
 //     WHERE id = p_import_id;
-//   
+//
 //   EXCEPTION WHEN OTHERS THEN
 //     UPDATE public.imports
 //     SET status = 'failed',
@@ -1761,7 +1741,7 @@ export const Constants = {
 //     RAISE;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION commit_soil_analysis_import(uuid, uuid, uuid, text, text, bigint, jsonb, jsonb)
 //   CREATE OR REPLACE FUNCTION public.commit_soil_analysis_import(p_import_id uuid, p_org_id uuid, p_campaign_id uuid, p_file_path text, p_original_name text, p_file_size bigint, p_data jsonb, p_metadata jsonb)
 //    RETURNS void
@@ -1780,7 +1760,7 @@ export const Constants = {
 //       ) THEN
 //           RAISE EXCEPTION 'Acesso negado';
 //       END IF;
-//   
+//
 //       IF p_metadata IS NOT NULL THEN
 //           UPDATE public.sampling_campaigns
 //           SET laboratory = COALESCE(p_metadata->>'laboratory', laboratory),
@@ -1790,7 +1770,7 @@ export const Constants = {
 //               updated_at = NOW()
 //           WHERE id = p_campaign_id AND organization_id = p_org_id;
 //       END IF;
-//   
+//
 //       INSERT INTO public.imports (
 //           id, organization_id, kind, status, created_by, uploaded_by,
 //           committed_at
@@ -1798,7 +1778,7 @@ export const Constants = {
 //           p_import_id, p_org_id, 'soil_analysis', 'committed', auth.uid(), auth.uid(),
 //           NOW()
 //       );
-//   
+//
 //       IF p_file_path IS NOT NULL THEN
 //           INSERT INTO public.import_files (
 //               import_id, organization_id, file_path, storage_path, original_name, file_size, file_kind
@@ -1806,7 +1786,7 @@ export const Constants = {
 //               p_import_id, p_org_id, p_file_path, p_file_path, p_original_name, p_file_size, 'soil_analysis'
 //           );
 //       END IF;
-//   
+//
 //       FOR v_item IN SELECT * FROM jsonb_array_elements(p_data)
 //       LOOP
 //           SELECT id INTO v_sample_id
@@ -1814,7 +1794,7 @@ export const Constants = {
 //           WHERE sampling_point_id = (v_item->>'point_id')::uuid
 //             AND depth_from_cm = (v_item->>'depth_from_cm')::numeric
 //             AND depth_to_cm = (v_item->>'depth_to_cm')::numeric;
-//   
+//
 //           IF v_sample_id IS NULL THEN
 //               v_sample_id := gen_random_uuid();
 //               INSERT INTO public.samples (
@@ -1828,7 +1808,7 @@ export const Constants = {
 //                   (v_item->>'depth_to_cm')::numeric
 //               );
 //           END IF;
-//   
+//
 //           FOR v_meas IN SELECT * FROM jsonb_array_elements(v_item->'measurements')
 //           LOOP
 //               INSERT INTO public.lab_measurements (
@@ -1848,7 +1828,7 @@ export const Constants = {
 //       END LOOP;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION get_area_map_data(uuid)
 //   CREATE OR REPLACE FUNCTION public.get_area_map_data(p_area_id uuid)
 //    RETURNS json
@@ -1867,16 +1847,16 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Acesso negado';
 //     END IF;
-//   
+//
 //     SELECT gis.ST_AsGeoJSON(a.boundary)::json
 //     INTO v_boundary
 //     FROM public.areas a
 //     WHERE a.id = p_area_id;
-//   
+//
 //     RETURN json_build_object('boundary', v_boundary);
 //   END;
 //   $function$
-//   
+//
 // FUNCTION get_campaign_points(uuid)
 //   CREATE OR REPLACE FUNCTION public.get_campaign_points(p_campaign_id uuid)
 //    RETURNS json
@@ -1895,7 +1875,7 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Acesso negado';
 //     END IF;
-//   
+//
 //     SELECT json_agg(
 //       json_build_object(
 //         'id', sp.id,
@@ -1907,11 +1887,11 @@ export const Constants = {
 //     INTO v_points
 //     FROM public.sampling_points sp
 //     WHERE sp.campaign_id = p_campaign_id;
-//   
+//
 //     RETURN COALESCE(v_points, '[]'::json);
 //   END;
 //   $function$
-//   
+//
 // FUNCTION get_campaign_points_with_attribute(uuid, text, numeric, numeric)
 //   CREATE OR REPLACE FUNCTION public.get_campaign_points_with_attribute(p_campaign_id uuid, p_attribute_code text, p_depth_from numeric, p_depth_to numeric)
 //    RETURNS json
@@ -1930,7 +1910,7 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Acesso negado';
 //     END IF;
-//   
+//
 //     SELECT json_agg(
 //       json_build_object(
 //         'id',    sp.id,
@@ -1951,11 +1931,11 @@ export const Constants = {
 //       ON  lm.sample_id       = s.id
 //       AND lm.attribute_code  = p_attribute_code
 //     WHERE sp.campaign_id = p_campaign_id;
-//   
+//
 //     RETURN COALESCE(v_points, '[]'::json);
 //   END;
 //   $function$
-//   
+//
 // FUNCTION get_farm_map_data(uuid)
 //   CREATE OR REPLACE FUNCTION public.get_farm_map_data(p_farm_id uuid)
 //    RETURNS json
@@ -1974,7 +1954,7 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Acesso negado';
 //     END IF;
-//   
+//
 //     SELECT json_agg(
 //       json_build_object(
 //         'id',                 a.id,
@@ -2002,11 +1982,11 @@ export const Constants = {
 //     ) stats ON stats.area_id = a.id
 //     WHERE a.farm_id = p_farm_id
 //       AND a.status = 'active';
-//   
+//
 //     RETURN json_build_object('areas', COALESCE(v_areas, '[]'::json));
 //   END;
 //   $function$
-//   
+//
 // FUNCTION get_user_organizations()
 //   CREATE OR REPLACE FUNCTION public.get_user_organizations()
 //    RETURNS SETOF uuid
@@ -2016,7 +1996,7 @@ export const Constants = {
 //   AS $function$
 //     SELECT organization_id FROM public.organization_members WHERE user_id = auth.uid();
 //   $function$
-//   
+//
 // FUNCTION handle_new_user()
 //   CREATE OR REPLACE FUNCTION public.handle_new_user()
 //    RETURNS trigger
@@ -2031,7 +2011,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION has_role_in_org(uuid, member_role[])
 //   CREATE OR REPLACE FUNCTION public.has_role_in_org(org_id uuid, allowed_roles member_role[])
 //    RETURNS boolean
@@ -2045,7 +2025,7 @@ export const Constants = {
 //         AND role = ANY(allowed_roles)
 //     );
 //   $function$
-//   
+//
 // FUNCTION reuse_campaign_points(uuid, uuid, uuid)
 //   CREATE OR REPLACE FUNCTION public.reuse_campaign_points(p_source_campaign_id uuid, p_target_campaign_id uuid, p_org_id uuid)
 //    RETURNS void
@@ -2060,7 +2040,7 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Acesso negado';
 //     END IF;
-//   
+//
 //     IF p_source_campaign_id = p_target_campaign_id OR NOT EXISTS (
 //       SELECT 1
 //       FROM public.sampling_campaigns source
@@ -2074,7 +2054,7 @@ export const Constants = {
 //     ) THEN
 //       RAISE EXCEPTION 'Campanhas incompatíveis';
 //     END IF;
-//   
+//
 //     INSERT INTO public.sampling_points (
 //       organization_id, campaign_id, name, code, location, external_id, sequence
 //     )
@@ -2084,7 +2064,7 @@ export const Constants = {
 //     WHERE campaign_id = p_source_campaign_id AND organization_id = p_org_id;
 //   END;
 //   $function$
-//   
+//
 // FUNCTION set_updated_at()
 //   CREATE OR REPLACE FUNCTION public.set_updated_at()
 //    RETURNS trigger
@@ -2095,7 +2075,7 @@ export const Constants = {
 //     RETURN NEW;
 //   END;
 //   $function$
-//   
+//
 
 // --- TRIGGERS ---
 // Table: area_seasons
@@ -2156,4 +2136,3 @@ export const Constants = {
 // Table: sampling_points
 //   CREATE UNIQUE INDEX idx_sampling_points_campaign_code ON public.sampling_points USING btree (campaign_id, code)
 //   CREATE INDEX idx_sampling_points_location ON public.sampling_points USING gist (location)
-
