@@ -97,7 +97,11 @@ export function ImportSoilWizard({
             'Content-Type': 'application/json',
             Authorization: `Bearer ${session?.access_token}`,
           },
-          body: JSON.stringify({ action: 'generate_template' }),
+          body: JSON.stringify({
+            action: 'generate_template',
+            areaId,
+            organizationId: organization?.id,
+          }),
         },
       )
       if (!res.ok) throw new Error('Falha ao gerar template')

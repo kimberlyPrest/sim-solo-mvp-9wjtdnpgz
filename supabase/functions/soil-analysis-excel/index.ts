@@ -117,9 +117,6 @@ const RECOMMENDATION_SHEET_ALIASES: [string, string][] = [
   ['ORGÂNICO', 'RELORG'],
   ['REL ORGANICO', 'RELORG'],
   ['REL ORGÂNICO', 'RELORG'],
-  ['LEIA_ME', 'LEIA_ME'],
-  ['LEIA ME', 'LEIA_ME'],
-  ['README', 'LEIA_ME'],
 ]
 
 // Returns canonical names of any recommendation/metadata sheets found in the workbook.
@@ -158,6 +155,32 @@ function normalizeColumnName(raw: unknown): string {
   if (s === 'PONTO') return 'PONTO'
   if (EXPECTED_COLUMNS.includes(s)) return s
   return COLUMN_ALIASES[s] ?? s
+}
+
+function normalizePointCode(raw: unknown): string {
+  if (raw === null || raw === undefined) return ''
+  return String(raw).trim().toUpperCase().replace(/\s+/g, '')
+}
+
+function pointCodeKeys(raw: unknown): string[] {
+  const normalized = normalizePointCode(raw)
+  if (!normalized) return []
+
+  const compact = normalized.replace(/[-_]/g, '')
+  const keys = new Set<string>([normalized, compact])
+  const prefixedNumber = compact.match(/^(?:P|PT|PONTO)0*(\d+)$/)
+  const plainNumber = compact.match(/^0*(\d+)$/)
+  const numberPart = prefixedNumber?.[1] || plainNumber?.[1]
+
+  if (numberPart) {
+    const plain = String(Number(numberPart))
+    keys.add(plain)
+    keys.add(`P${plain}`)
+    keys.add(`P${plain.padStart(2, '0')}`)
+    keys.add(plain.padStart(2, '0'))
+  }
+
+  return Array.from(keys)
 }
 
 // Detects the header row index and the first data row index.
@@ -212,20 +235,41 @@ Deno.serve(async (req: Request) => {
     if (body.action === 'generate_template') {
       const wb = XLSX.utils.book_new()
       const header = EXPECTED_COLUMNS
+      const { areaId, organizationId } = body
 
-      const ws0_20 = XLSX.utils.aoa_to_sheet([header])
-      const ws20_40 = XLSX.utils.aoa_to_sheet([header])
+      let points: { code: string }[] = []
+      if (areaId && organizationId) {
+        const { data: areaPoints, error: pointsError } = await supabaseAuth
+          .from('sampling_points')
+          .select('code')
+          .eq('area_id', areaId)
+          .eq('organization_id', organizationId)
+          .order('sequence', { ascending: true })
+          .order('code', { ascending: true })
+
+        if (pointsError) throw new Error('Erro ao buscar pontos da área para o template')
+        points = areaPoints ?? []
+      }
+
+      const templateRows = points.map((point) => [
+        point.code,
+        ...Array(header.length - 1).fill(null),
+      ])
+      const ws0_20 = XLSX.utils.aoa_to_sheet([header, ...templateRows])
+      const ws20_40 = XLSX.utils.aoa_to_sheet([header, ...templateRows])
+      const exampleCode = points[0]?.code || 'CODIGO_DO_PONTO'
 
       const wsReadme = XLSX.utils.aoa_to_sheet([
         ['INSTRUÇÕES DE PREENCHIMENTO'],
-        ['1. Preencha a coluna PONTO com o identificador exato do ponto da área.'],
+        ['1. As abas SOLO_0_20 e SOLO_20_40 já trazem os pontos cadastrados nesta área.'],
         ['2. Preencha os valores laboratoriais com números.'],
         ['3. Não altere o nome das abas SOLO_0_20 e SOLO_20_40.'],
+        ['4. Se as abas vierem sem pontos, faça primeiro a configuração geográfica da área.'],
         [],
         ['EXEMPLO:'],
         header,
         [
-          'P01',
+          exampleCode,
           5.5,
           5.0,
           10,
@@ -316,9 +360,11 @@ Deno.serve(async (req: Request) => {
       if (pointsError) throw new Error('Erro ao buscar pontos da área')
 
       const pointMap = new Map<string, string>()
-      ;(points ?? []).forEach((p: { id: string; code: string }) =>
-        pointMap.set(String(p.code).trim().toUpperCase(), p.id),
-      )
+      ;(points ?? []).forEach((p: { id: string; code: string }) => {
+        pointCodeKeys(p.code).forEach((key) => {
+          if (!pointMap.has(key)) pointMap.set(key, p.id)
+        })
+      })
 
       type ParsedItem = {
         point_id: string | undefined
@@ -352,8 +398,10 @@ Deno.serve(async (req: Request) => {
           const pontoRaw = row[pontoColIdx]
           if (pontoRaw === null || pontoRaw === undefined || pontoRaw === '') continue
 
-          const pontoStr = String(pontoRaw).trim().toUpperCase()
-          const pointId = pointMap.get(pontoStr)
+          const pontoStr = normalizePointCode(pontoRaw)
+          const pointId = pointCodeKeys(pontoRaw)
+            .map((key) => pointMap.get(key))
+            .find((id): id is string => Boolean(id))
 
           const item: ParsedItem = {
             point_id: pointId,
@@ -416,6 +464,7 @@ Deno.serve(async (req: Request) => {
       collectUnknown(ws20_40)
 
       const detectedRecommendationSheets = detectRecommendationSheets(wb)
+      const errors = Array.from(new Set(allData.flatMap((d) => d.errors)))
 
       const validationSummary = {
         totalRows: allData.length,
@@ -423,7 +472,7 @@ Deno.serve(async (req: Request) => {
           .length,
         unmatchedPoints: allData.filter((d) => d.errors.some((e: string) => e.startsWith('Ponto')))
           .length,
-        errors: allData.flatMap((d) => d.errors),
+        errors,
         unknownColumns: Array.from(unknownCols),
         // Recommendation sheets present in this workbook but not imported by this flow.
         // Surfaces RELCORE / RELNUTRI / Rel Org to the UI so it can inform the user.
