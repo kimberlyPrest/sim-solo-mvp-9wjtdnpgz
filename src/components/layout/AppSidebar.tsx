@@ -9,6 +9,7 @@ import {
   SidebarMenuItem,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarRail,
 } from '@/components/ui/sidebar'
 
 const navItems = [
@@ -22,13 +23,13 @@ export function AppSidebar() {
   const location = useLocation()
 
   return (
-    <Sidebar>
+    <Sidebar collapsible="offcanvas" variant="floating" className="z-[1200]">
       <SidebarHeader className="border-b border-sidebar-border px-6 py-4">
         <div className="flex items-center gap-2 font-bold text-lg text-sidebar-primary">
           <div className="flex h-8 w-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
             <Sprout className="h-5 w-5" />
           </div>
-          <span>SIM Solo</span>
+          <span className="tracking-tight">SIM Solo</span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -56,6 +57,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarRail />
     </Sidebar>
   )
 }

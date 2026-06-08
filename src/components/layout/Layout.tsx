@@ -45,13 +45,13 @@ export function Layout() {
   }
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <div className="flex min-h-screen w-full bg-muted/20">
         <AppSidebar />
         <main className="flex w-full flex-1 flex-col overflow-hidden">
           <Header />
           <div className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto w-full max-w-6xl">
+            <div className="mx-auto w-full max-w-[1600px]">
               <Outlet />
             </div>
           </div>
