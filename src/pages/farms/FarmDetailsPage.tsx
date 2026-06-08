@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Archive,
   Plus,
@@ -127,6 +127,7 @@ function areaHref(area: FarmAreaData) {
 export default function FarmDetailsPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const { organization, hasRole } = useAuth()
   const { toast } = useToast()
 
@@ -290,6 +291,12 @@ export default function FarmDetailsPage() {
   useEffect(() => {
     fetchData()
   }, [id, organization])
+
+  useEffect(() => {
+    if (loading || !farm || !canEdit || searchParams.get('setup') !== 'area') return
+    setAreaSheetOpen(true)
+    setSearchParams({}, { replace: true })
+  }, [canEdit, farm, loading, searchParams, setSearchParams])
 
   const handleUpdate = async (data: FarmFormData) => {
     setIsSubmitting(true)

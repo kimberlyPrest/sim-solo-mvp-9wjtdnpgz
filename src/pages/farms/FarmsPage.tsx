@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Plus, Search, Tractor, Trash2 } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import {
+  ArrowRight,
+  Crosshair,
+  FlaskConical,
+  MapPin,
+  Plus,
+  Search,
+  Tractor,
+  Trash2,
+} from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
@@ -24,6 +33,7 @@ import { deleteFarmCascade } from '@/lib/entity-deletion'
 import { updateFarmLocationFromAreaMajority } from '@/lib/farm-location'
 
 export default function FarmsPage() {
+  const navigate = useNavigate()
   const { organization, hasRole } = useAuth()
   type FarmWithProducer = Tables<'farms'> & { producers: { name: string } | null }
   const [farms, setFarms] = useState<FarmWithProducer[]>([])
@@ -97,13 +107,17 @@ export default function FarmsPage() {
   const handleCreate = async (data: FarmFormData) => {
     if (!organization) return
     setIsSubmitting(true)
-    const { error } = await supabase.from('farms').insert([
-      {
-        ...data,
-        organization_id: organization.id,
-        status: 'active',
-      },
-    ])
+    const { data: createdFarm, error } = await supabase
+      .from('farms')
+      .insert([
+        {
+          ...data,
+          organization_id: organization.id,
+          status: 'active',
+        },
+      ])
+      .select('id')
+      .single()
     setIsSubmitting(false)
 
     if (error) {
@@ -111,7 +125,8 @@ export default function FarmsPage() {
     } else {
       toast({ title: 'Sucesso', description: 'Fazenda criada com sucesso.' })
       setIsSheetOpen(false)
-      fetchData()
+      if (createdFarm?.id) navigate(`/fazendas/${createdFarm.id}?setup=area`)
+      else fetchData()
     }
   }
 
@@ -163,6 +178,34 @@ export default function FarmsPage() {
             </SheetContent>
           </Sheet>
         )}
+      </div>
+
+      <div className="rounded-xl border border-border/60 bg-card p-4">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-sm font-semibold">Fluxo de implantação</p>
+            <p className="text-xs text-muted-foreground">
+              Crie a fazenda, cadastre o primeiro talhão, configure o shapefile e importe a análise.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <Tractor className="h-3.5 w-3.5" /> Fazenda
+            </span>
+            <ArrowRight className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <Crosshair className="h-3.5 w-3.5" /> Talhão
+            </span>
+            <ArrowRight className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <MapPin className="h-3.5 w-3.5" /> Geo
+            </span>
+            <ArrowRight className="h-3.5 w-3.5" />
+            <span className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-muted/30 px-2.5 py-1">
+              <FlaskConical className="h-3.5 w-3.5" /> Solo
+            </span>
+          </div>
+        </div>
       </div>
 
       <Card>
